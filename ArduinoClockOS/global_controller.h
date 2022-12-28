@@ -25,7 +25,9 @@
 //  *** CONFIGURATION ***
 ////////////////////////////////////////////////////////////////////////////////
 
-#define COMMAND_DISPLAY_DATETIME        1
+#define COMMAND_NONE                    0
+#define COMMAND_PROCESSED_OK            1
+#define COMMAND_DISPLAY_DATETIME        2
 
 #define DISPLAY_MODE_INTERVAL           15
 #define DISPLAY_STRINGS                 3
@@ -39,7 +41,7 @@
 #define GLOBAL_STATE_NORMAL             0
 #define GLOBAL_STATE_MENU               1
 #define GLOBAL_STATE_SETTER             2
-#define GLOBAL_STATE_MESSAGE            3
+#define GLOBAL_STATE_ALARM              3
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -54,11 +56,20 @@ class GlobalController
         bool  brightness_auto               =   true;
         int   buzzer_hour_change_interval   =   0;
         bool  buzzer_hour_change_complete   =   false;
-        int   display_selected_index        =   0;
         int   display_state                 =   DISPLAY_DATETIME_STATE;
+        bool  force_display_refresh         =   false;
         int   global_state                  =   GLOBAL_STATE_NORMAL;
-        bool  global_state_change           =   false;
-        char  input_key                     =   0;
+
+        String  input_command_value         =   "";
+        char    input_key                   =   0;
+
+        //  Display Management
+        void  DisplayAlarmIsSet();
+        void  DisplayClock();
+        void  DisplayDate();
+        void  DisplayTemperatureInside();
+        void  DisplayTemperatureOutside();
+        void  SetNextDisplayingState();
 
         //  Initialization
         void  InitializeClock();
@@ -70,8 +81,9 @@ class GlobalController
         void  Initialize();
 
     public:
-        KeypadController *keypad_ctrl;
-        SerialController *serial_ctrl;
+        Alarm             * alarm;
+        KeypadController  * keypad_ctrl;
+        SerialController  * serial_ctrl;
 
         BuzzerController              * buzzer_ctrl;
         ClockController               * clock_ctrl;
@@ -83,42 +95,130 @@ class GlobalController
         TemperatureSensorController   * temp_sensor_ctrl_out;
         ClockTimer                    * update_timer;
 
-        int   input_command           =   0;
-
         GlobalController();
 
         //  Brightness management.
         bool  IsAutoBrightness();
-        void  ProcessAutoBrightness();
         void  SetAutoBrightness(bool enabled);
 
-        //  Buzzer
+        //  Buzzer.
         int   GetBuzzerHourNotifierInterval();
         void  SetBuzzerHourNotifierInterval(int interval = 0);
-        void  BuzzerNotifyChangeHour();
 
-        //  Display management.
-        DisplayString *GetDisplayString(int index);
-        DisplayString *GetSelectedDisplayString();
-        void  SelectDisplayString(int index);
+        //  Data Management.
+        void  ProcessAlarm();
+        void  ProcessAutoBrightness(bool override = false);
+        void  ProcessBeepHour();
+        void  ProcessSecondLedBlinking();
+        void  ProcessFunctionalities();
+
+        //  Display Management.
+        void            ForceDisplayRefresh();
+        int             GetDisplayingState();
+        DisplayString * GetDisplayString(int index);
+        void            ProcessDisplay(bool force_refresh = false);
+        void            SetDisplayingState(int displaying_state, bool reset_timer = true);
 
         //  Input.
-        int   GetInputCommand();
-        char  GetInputKey();
-        void  ProcessInput();
+        String  GetInputCommand();
+        char    GetInputKey();
+        bool    IsCommandValueInputed();
+        void    ProcessInput();
 
-        //  States and commands management.
-        int   GetDisplayingState();
-        void  SetDisplayingState(int displaying_state, bool reset_timer);
-        void  SetNextDisplayingState();
-
-        int   GetGlobalState();
-        bool  IsGlobalChangeRequested();
-        void  RequestGlobalStateChange();
-        void  SetGlobalState(int machine_state);
-        void  FinalizeGlobalStateChange();
+        //  Machine States Management.
+        int   GetMachineState();
+        void  SetMachineState(int machine_state);
+        void  FinalizeCycle();
 };
 
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** DISPLAY MANAGEMENT PRIVATE METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+void GlobalController::DisplayAlarmIsSet()
+{
+    DisplayString * dsp_str   = this->display_strings[TEXT_ALIGN_RIGHT];
+    int             position  = dsp_str->_xpos - 7;
+
+    switch (this->alarm->GetState())
+    {
+        case ALARM_DISARMED:
+            this->display_ctrl->DrawSprite(SPRITE_ALARM, position, 1);
+            break;
+        
+        case ALARM_SUSPENDED:
+            this->display_ctrl->DrawSprite(SPRITE_ALARM, position, 2);
+            break;
+    }    
+}
+
+//  ----------------------------------------------------------------------------
+//  Wyswietlenie zegara na prawej stronie wyswietlacza.
+void GlobalController::DisplayClock()
+{
+    DisplayString * dsp_str = this->display_strings[TEXT_ALIGN_RIGHT];
+    bool            blink   = this->clock_ctrl->GetBlink();
+    
+    dsp_str->text   = this->clock_ctrl->GetTime("HM", ':', blink);
+    dsp_str->offset = 1;
+    this->display_ctrl->PrintDS(dsp_str, true);
+}
+
+//  ----------------------------------------------------------------------------
+//  Wyswietlenie daty na lewej stronie wyswietlacza.
+void GlobalController::DisplayDate()
+{
+    DisplayString * dsp_str = this->display_strings[TEXT_ALIGN_LEFT];
+
+    dsp_str->text   = this->clock_ctrl->GetDate("YMD", '.');
+    dsp_str->offset = 1;
+    dsp_str->_xpos  = 0;
+
+    this->display_ctrl->PrintDS(dsp_str, true);
+}
+
+//  ----------------------------------------------------------------------------
+//  Wyswietlenie temperatury wewnetrznej na lewej stronie wyswietlacza.
+void GlobalController::DisplayTemperatureInside()
+{
+    DisplayString * dsp_str = this->display_strings[TEXT_ALIGN_LEFT];
+    int             temp    = this->temp_sensor_ctrl_in->GetTemperature();
+
+    dsp_str->text   =   temp <= TEMPERATURE_SENSOR_NULL ? "-`C" : String(temp) + "`C";
+    dsp_str->offset =   10;
+    dsp_str->_xpos  =   8;
+    dsp_str->_width +=  2;
+
+    this->display_ctrl->DrawSprite(SPRITE_HOME, 0, 0);
+    this->display_ctrl->PrintDS(dsp_str, true);
+}
+
+//  ----------------------------------------------------------------------------
+//  Wyswietlenie temperatury zewnetrznej na lewej stronie wyswietlacza.
+void GlobalController::DisplayTemperatureOutside()
+{
+    DisplayString * dsp_str = this->display_strings[TEXT_ALIGN_LEFT];
+    int             temp    = this->temp_sensor_ctrl_out->GetTemperature();
+
+    dsp_str->text   =   temp <= TEMPERATURE_SENSOR_NULL ? "-`C" : String(temp) + "`C";
+    dsp_str->offset =   10;
+    dsp_str->_xpos  =   8;
+    dsp_str->_width +=  2;
+
+    this->display_ctrl->DrawSprite(SPRITE_WEATHER, 0, 0);
+    this->display_ctrl->PrintDS(dsp_str, true);
+}
+
+//  ----------------------------------------------------------------------------
+//  Wyswietlenie nastepnych informacji na ekranie w trybie zapetlenia.
+void GlobalController::SetNextDisplayingState()
+{
+    int new_display_state = (this->display_state + 1) % DISPLAY_STATES;
+
+    this->display_state = new_display_state;
+    this->update_timer->Reset();
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //  *** INITIALIZATION PRIVATE METHOD BODIES ***
@@ -270,6 +370,7 @@ void GlobalController::Initialize()
 //  Konstruktor klasy kontrolera globalnego
 GlobalController::GlobalController()
 {
+    this->alarm = new Alarm();
     this->Initialize();
 }
 
@@ -287,12 +388,15 @@ bool GlobalController::IsAutoBrightness()
 
 //  ----------------------------------------------------------------------------
 //  Ustawienie jasnosci poprzez opcje jasnosci automatycznej.
-void GlobalController::ProcessAutoBrightness()
+void GlobalController::ProcessAutoBrightness(bool override = false)
 {
-    int _brightness = (this->photoresistor_ctrl_left->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)
-        + this->photoresistor_ctrl_right->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)) / 2;
+    if (this->brightness_auto || override)
+    {
+        int brightness  = (this->photoresistor_ctrl_left->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)
+            + this->photoresistor_ctrl_right->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)) / 2;
         
-    this->display_ctrl->SetBrightness(_brightness);
+        this->display_ctrl->SetBrightness(brightness);
+    }
 }
 
 //  ----------------------------------------------------------------------------
@@ -326,9 +430,25 @@ void GlobalController::SetBuzzerHourNotifierInterval(int interval = 0)
         this->buzzer_hour_change_interval = 0;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+//  *** DATA MANAGEMENT PUBLIC METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+//  Sprawdzenie stanu alarmu, czy ma zostac uruchomiony.
+void GlobalController::ProcessAlarm()
+{
+    if (this->alarm->IsEnabled())
+    {
+        Time datetime_now = this->clock_ctrl->Now();
+        
+        if (this->alarm->CheckTrigger(datetime_now))
+            this->SetMachineState(GLOBAL_STATE_ALARM);
+    }
+}
+
 //  ----------------------------------------------------------------------------
 //  Wywolanie powiadomienia o zmianie godziny brzeczykiem.
-void GlobalController::BuzzerNotifyChangeHour()
+void GlobalController::ProcessBeepHour()
 {
     if (this->buzzer_hour_change_interval > 0)
     {
@@ -346,10 +466,44 @@ void GlobalController::BuzzerNotifyChangeHour()
     }
 }
 
+//  ----------------------------------------------------------------------------
+//  Miganie wbudowana dioda led podczas zmianiy sekundy.
+void GlobalController::ProcessSecondLedBlinking()
+{
+    bool blink = this->clock_ctrl->GetBlink();
+    digitalWrite(LED_BUILTIN, blink ? LOW : HIGH);
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetwarzanie funkcjonalnosci.
+void GlobalController::ProcessFunctionalities()
+{
+    this->ProcessSecondLedBlinking();
+    this->ProcessAutoBrightness();
+    this->ProcessBeepHour();
+    this->ProcessAlarm();
+}
+
 ////////////////////////////////////////////////////////////////////////////////
-//  *** DISPLAY PUBLIC METHOD BODIES ***
+//  *** DISPLAY MANAGEMENT PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Force display refresh to show data for current state.
+void GlobalController::ForceDisplayRefresh()
+{
+    this->force_display_refresh = true;
+}
+
+//  ----------------------------------------------------------------------------
+/*  Pobranie indeksu aktualnie wyswietlanego elementu.
+ *  @result: Indeks aktualnie wyswietlanego elementu.
+ */
+int GlobalController::GetDisplayingState()
+{
+    return this->display_state;
+}
+
+//  ----------------------------------------------------------------------------
 /*  Pobranie kontenera tekstu wyswietlacza.
  *  @param index: Indeks strony wyswietlacza (0 - Lewa, 1 - Srodkowa, 2 - Prawa).
  *  @return: Struktura kontenera tekstu wyswietlacza.
@@ -360,34 +514,79 @@ DisplayString * GlobalController::GetDisplayString(int index)
 }
 
 //  ----------------------------------------------------------------------------
-/*  Pobranie ostatnio wybieranego kontenera tekstu wyswietlacza.
- *  @return: Struktura kontenera tekstu wyswietlacza.
- */
-DisplayString * GlobalController::GetSelectedDisplayString()
+//  Wyswietlanie podstawowych danych na ekranie.
+void GlobalController::ProcessDisplay(bool force_refresh = false)
 {
-    return this->display_strings[
-        max(0, min(this->display_selected_index, DISPLAY_STRINGS - 1))];
+    bool force_update = this->force_display_refresh || force_refresh;
+
+    if (!force_update)
+    {
+        //  Pobranie danych i przetworzenie zmian automatycznych.
+        Time  datetime_now  = this->clock_ctrl->Now();
+        bool  auto_switch   = this->update_timer->Work(datetime_now);
+        bool  day_changed   = this->clock_ctrl->HasDayChanged();
+
+        if (day_changed)
+            this->SetDisplayingState(DISPLAY_DATETIME_STATE);
+
+        else if (auto_switch)
+            this->SetNextDisplayingState();
+        
+        force_update = auto_switch || day_changed;
+    }
+
+    //  Wyswietlenie danych na ekranie.
+    if (force_update)
+    {
+        switch (this->display_state)
+        {
+            case DISPLAY_DATETIME_STATE:
+                this->DisplayDate();
+                break;
+            
+            case DISPLAY_TEMPERATURE_IN_STATE:
+                this->DisplayTemperatureInside();
+                break;
+            
+            case DISPLAY_TEMPERATURE_OUT_STATE:
+                this->DisplayTemperatureOutside();
+                break;
+        }
+
+        if (this->alarm->IsEnabled())
+            this->DisplayAlarmIsSet();
+    }
+
+    this->DisplayClock();
 }
 
 //  ----------------------------------------------------------------------------
-/*  Wybranie kontenera tekstu wyswietlacza jako ostatniego.
- *  Indeks strony wyswietlacza (0 - Lewa, 1 - Srodkowa, 2 - Prawa).
+/*  Ustawienie aktualnie wyswietlanego elementu.
+ *  @param displaying_state: Indeks wyswietlanego elementu.
+ *  @param reset_timer: Zresetowanie czasomierza autmatycznie zmieniajacego wyswietlane elementy.
  */
-void GlobalController::SelectDisplayString(int index)
+void GlobalController::SetDisplayingState(int displaying_state, bool reset_timer = true)
 {
-    this->display_selected_index = max(0, min(index, DISPLAY_STRINGS - 1));
+    if (this->global_state == GLOBAL_STATE_NORMAL)
+    {
+        this->force_display_refresh = true;
+        this->display_state = displaying_state % DISPLAY_STATES;
+
+        if (reset_timer)
+            this->update_timer->Reset();
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 //  *** INPUT PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
-/*  Pobranie indeksu ostatniej wywolanej komendy.
- *  @return: Indeks ostatniej wywolanej komendy.
+/*  Pobranie ostatniej wywolanej komendy.
+ *  @returnP Ostatnia wywolana komenda.
  */
-int GlobalController::GetInputCommand()
+String GlobalController::GetInputCommand()
 {
-    return this->input_command;
+    return this->input_command_value;
 }
 
 //  ----------------------------------------------------------------------------
@@ -400,97 +599,54 @@ char GlobalController::GetInputKey()
 }
 
 //  ----------------------------------------------------------------------------
-//  Przetworzenie sygnalu danych wejsciowych z klawiatury.
+/*  Sprawdzenie czy zostala wprowadzona komenda z portu szeregowego.
+ *  @return: True - komenda została wprowadzona; False - w innym wypadku.
+ */
+bool GlobalController::IsCommandValueInputed()
+{
+    return this->input_command_value != NULL && this->input_command_value.length() > 0;
+}
+
+//  ----------------------------------------------------------------------------
+/*  Przetworzenie sygnalu danych wejsciowych z klawiatury.
+ *  @param command_processor: Przetwarzacz polecen tekstowych.
+ */
 void GlobalController::ProcessInput()
 {
+    //  Odczytanie danych przychodzacych z urzadzen wejscia/wyjscia.
+    this->input_command_value = this->serial_ctrl->ReadInputData();
     this->input_key = this->keypad_ctrl->GetPressedKey();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//  *** STATES & COMMANDS MANAGEMENT PUBLIC METHOD BODIES ***
+//  *** MACHINE STATES MANAGEMENT PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
-/*  Pobranie indeksu aktualnie wyswietlanego elementu.
- *  @result: Indeks aktualnie wyswietlanego elementu.
- */
-int GlobalController::GetDisplayingState()
-{
-    return this->display_state;
-}
-
-//  ----------------------------------------------------------------------------
-/*  Ustawienie aktualnie wyswietlanego elementu.
- *  @param displaying_state: Indeks wyswietlanego elementu.
- *  @param reset_timer: Zresetowanie czasomierza autmatycznie zmieniajacego wyswietlane elementy.
- */
-void GlobalController::SetDisplayingState(int displaying_state, bool reset_timer = true)
-{
-    if (this->global_state == GLOBAL_STATE_NORMAL)
-    {
-        this->RequestGlobalStateChange();
-        this->display_state = displaying_state % DISPLAY_STATES;
-
-        if (reset_timer)
-            this->update_timer->Reset();
-    }
-}
-
-//  ----------------------------------------------------------------------------
-//  Wyswietlenie nastepnych informacji na ekranie w trybie zapetlenia.
-void GlobalController::SetNextDisplayingState()
-{
-    if (this->global_state == GLOBAL_STATE_NORMAL)
-    {
-        int new_display_state = (this->display_state + 1) % DISPLAY_STATES;
-
-        this->RequestGlobalStateChange();
-        this->display_state = new_display_state;
-        this->update_timer->Reset();
-    }
-}
-
-//  ----------------------------------------------------------------------------
 /*  Pobranie indeksu aktualnego trybu pracy uzadzenia.
  *  @result: Indeks aktualnego trybu pracy uzadzenia.
  */
-int GlobalController::GetGlobalState()
+int GlobalController::GetMachineState()
 {
     return this->global_state;
-}
-
-//  ----------------------------------------------------------------------------
-/*  Pobranie informacji czy zmiana aktualnego trybu pracy urzadzenia zostala wywoalana.
- *  @result: True - zmiana trybu pracy urzadzenia zostala wywoalana; False - w innym przypadku.
- */
-bool GlobalController::IsGlobalChangeRequested()
-{
-    return this->global_state_change;
-}
-
-//  ----------------------------------------------------------------------------
-//  Zadanie zmiany trybu pracy uzadzenia.
-void GlobalController::RequestGlobalStateChange()
-{
-    this->global_state_change = true;
 }
 
 //  ----------------------------------------------------------------------------
 /*  Ustawienie trybu pracy uzadzenia.
  *  @param machine_state: Indeks trybu pracy uzadzenia.
  */
-void GlobalController::SetGlobalState(int machine_state)
+void GlobalController::SetMachineState(int machine_state)
 {
-    this->RequestGlobalStateChange();
+    this->force_display_refresh = true;
     this->global_state = machine_state % GLOBAL_STATES;
     this->serial_ctrl->WriteRawData("Entering mode: " + String(machine_state % GLOBAL_STATES), this->serial_ctrl->GetLastInputDevice());
 }
 
 //  ----------------------------------------------------------------------------
 //  Zakonczenie zadania zmiany trybu pracy uzadzenia.
-void GlobalController::FinalizeGlobalStateChange()
+void GlobalController::FinalizeCycle()
 {
-    this->global_state_change = false;
-    this->input_command = 0;
+    this->force_display_refresh = false;
+    this->input_command_value = "";
     this->input_key = 0;
 }
 

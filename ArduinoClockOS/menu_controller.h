@@ -60,7 +60,7 @@ class MenuController
         MenuController(GlobalController * controller);
 
         void  OpenMenu(int level, int selection);
-        int   ProcessInput();
+        int   ProcessInput(int input);
 };
 
 
@@ -252,6 +252,10 @@ MenuController::MenuController(GlobalController * controller)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Otwiera menu i ustawia okreslona pozycje startowa.
+ *  @param level: Poziom menu.
+ *  @param selection: Wybrany element menu ktory zostanie wyswietlony.
+ */
 void MenuController::OpenMenu(int level = LEVEL_MENU, int selection = MENU_ITEM_SETTINGS)
 {
     this->menu_level = level;
@@ -260,11 +264,13 @@ void MenuController::OpenMenu(int level = LEVEL_MENU, int selection = MENU_ITEM_
 }
 
 //  ----------------------------------------------------------------------------
-int MenuController::ProcessInput()
+/*  Przetworzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury.
+ *  @param input: Dane wejsciowe z klawiatury (wcisniety klawisz).
+ *  @return: Indeks wykonanego procesu przez kontroler menu.
+ */
+int MenuController::ProcessInput(int input)
 {
-    char key = this->controller->GetInputKey();
-
-    switch (key)
+    switch (input)
     {
         case KEYPAD_SELECT_KEY:
             return NavigateForward();

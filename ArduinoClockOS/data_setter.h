@@ -27,13 +27,14 @@
 #define SETTER_SAVE       -2
 #define SETTER_EXIT       -3
 #define SETTER_FULL_EXIT  -4
+#define SETTER_OFF        -5
 
 #define SETTER_DATE_POSITIONS       6
 #define SETTER_TIME_POSITIONS       5
 #define SETTER_BRIGHNESS_POSITIONS  11
 #define SETTER_BRIGHNESS_AUTO       10
 #define SETTER_BEEP_POSITIONS       7
-#define SETTER_ALARM_POSITIONS      4
+#define SETTER_ALARM_POSITIONS      5
 
 #define SETTER_INPUT_MAX            2
 
@@ -88,7 +89,7 @@ class DataSetter
         int   GetMode();
 
         void  OpenSetter(int mode);
-        int   ProcessInput();
+        int   ProcessInput(int input);
         void  UpdateDisplay();
 };
 
@@ -169,7 +170,7 @@ int DataSetter::NavigateForward()
             }
             else if (value == SETTER_BRIGHNESS_AUTO)
             {
-                controller->SetAutoBrightness(false);
+                controller->SetAutoBrightness(true);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -189,8 +190,16 @@ int DataSetter::NavigateForward()
             break;
         
         case ALARM_SETTER:
+            if (value == SETTER_OFF)
+            {
+                this->controller->alarm->DisableAlarm();
+                return SETTER_EXIT;
+            }
             if (value == SETTER_SAVE)
             {
+                int hour_alarm = this->data[1];
+                int mins_alarm = this->data[2];
+                this->controller->alarm->SetAlarm(hour_alarm, mins_alarm);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -449,11 +458,14 @@ void DataSetter::DisplayData(DisplayController * dsp_ctrl)
         case ALARM_SETTER:
             if (pos >= 1 && pos <= 2)
                 display_string = this->GetEditableString(pos - 1, min(2, max(0, 2 - input_index)));
-
+            
             else if (pos == 3)
+                display_string = SETTER_OFF_STR;
+
+            else if (pos == 4)
                 display_string = SETTER_SET_STR;
             
-            else if (pos == 4)
+            else if (pos == 5)
                 display_string = SETTER_EXIT_STR;
 
             break;
@@ -523,7 +535,7 @@ DataSetter::DataSetter(GlobalController * controller)
     this->controller = controller;
 
     this->data_dsp_string = new DisplayString(0, TEXT_ALIGN_RIGHT, "");
-    this->data_dsp_string->offset = -1;
+    this->data_dsp_string->offset = 1;
     this->data_dsp_string->_xpos = this->controller->display_ctrl->GetWidth()-1;
 }
 
@@ -596,10 +608,11 @@ void DataSetter::OpenSetter(int mode)
         
         case ALARM_SETTER:
             this->data[0] = SETTER_ALARM_POSITIONS;
-            this->data[1] = 0;
-            this->data[2] = 0;
-            this->data[3] = SETTER_SAVE;
-            this->data[4] = SETTER_EXIT;            
+            this->data[1] = this->controller->alarm->hour;
+            this->data[2] = this->controller->alarm->minute;
+            this->data[3] = SETTER_OFF;
+            this->data[4] = SETTER_SAVE;
+            this->data[5] = SETTER_EXIT;            
             this->allow_keyboard_input = true;
             break;
     }
@@ -608,14 +621,12 @@ void DataSetter::OpenSetter(int mode)
 }
 
 //  ----------------------------------------------------------------------------
-int DataSetter::ProcessInput()
+int DataSetter::ProcessInput(int input)
 {
-    char key = this->controller->GetInputKey();
+    if (this->allow_keyboard_input && input >= KEYPAD_0_KEY && input <= KEYPAD_9_KEY)
+        return this->NavigateManualInput(input);
 
-    if (this->allow_keyboard_input && key >= KEYPAD_0_KEY && key <= KEYPAD_9_KEY)
-        return this->NavigateManualInput(key);
-
-    switch (key)
+    switch (input)
     {
         case KEYPAD_SELECT_KEY:
             return this->NavigateForward();

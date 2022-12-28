@@ -18,9 +18,10 @@
 //  *** CONFIGURATION ***
 ////////////////////////////////////////////////////////////////////////////////
 
-#define ALARM_DISARMED    0
-#define ALARM_RAISED      1
-#define ALARM_SUSPENDED   2
+#define ALARM_NONE        0
+#define ALARM_DISARMED    1
+#define ALARM_RAISED      2
+#define ALARM_SUSPENDED   3
 
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -34,13 +35,14 @@ class Alarm
         bool  enabled           =   false;
         bool  has_been_raised   =   false;
         int   sleep_time        =   10;
+        bool  set_sleep_time    =   false;
 
         bool  CheckBaseTrigger(Time now_time);
         bool  CheckSuspendedTrigger(Time now_time);
     
     public:
-        int   hour    =   0;
-        int   minute  =   0;
+        int   hour    =   6;
+        int   minute  =   30;
 
         Alarm();
 
@@ -78,7 +80,12 @@ bool Alarm::CheckBaseTrigger(Time now_time)
 //  ----------------------------------------------------------------------------
 bool Alarm::CheckSuspendedTrigger(Time now_time)
 {
-    int _all_minutes = this->hour * 60 + this->minute + this->sleep_time;
+    if (this->set_sleep_time)
+    {
+        //
+        this->set_sleep_time = false;
+    }
+    /*int _all_minutes = this->hour * 60 + this->minute + this->sleep_time;
 
     int _hour = _all_minutes / 60;
     int _minute = _all_minutes % 60;
@@ -92,7 +99,7 @@ bool Alarm::CheckSuspendedTrigger(Time now_time)
         this->has_been_raised = true;
 
         return true;
-    }
+    }*/
 
     return false;
 }
@@ -143,12 +150,14 @@ bool Alarm::IsEnabled()
 //  ----------------------------------------------------------------------------
 void Alarm::DisableAlarm()
 {
+    this->alarm_state = ALARM_DISARMED;
     this->enabled = false;
 }
 
 //  ----------------------------------------------------------------------------
 void Alarm::SetAlarm(int hour, int minute)
 {
+    this->alarm_state = ALARM_DISARMED;
     this->hour = hour;
     this->minute = minute;
     this->enabled = true;
@@ -160,11 +169,17 @@ int Alarm::ProcessInput(char key)
     switch (key)
     {
         case KEYPAD_MENU_KEY:
+            this->alarm_state = ALARM_DISARMED;
             return ALARM_DISARMED;
         
         default:
+            this->alarm_state = ALARM_DISARMED;
+            //this->alarm_state = ALARM_SUSPENDED;
+            //this->set_sleep_time = true;
             return ALARM_SUSPENDED;
     }
+
+    return ALARM_NONE;
 }
 
 #endif

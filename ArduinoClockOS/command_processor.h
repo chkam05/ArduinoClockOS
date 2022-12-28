@@ -35,14 +35,14 @@ class CommandProcessor
         void  RaiseInvalidParameterError(String command);
 
         //  Management methods.
-        bool  ProcessBrightnessSetCommand();
-        bool  ProcessDateSetCommand();
-        bool  ProcessTimeSetCommand();
+        int   ProcessBrightnessSetCommand();
+        int   ProcessDateSetCommand();
+        int   ProcessTimeSetCommand();
     
     public:
         CommandProcessor(GlobalController * controller);
 
-        bool ProcessCommand(String raw_data);
+        int   ProcessCommand(String raw_data);
 };
 
 
@@ -148,12 +148,12 @@ void CommandProcessor::RaiseInvalidParameterError(String command)
 ////////////////////////////////////////////////////////////////////////////////
 
 //  Przetworzenie polecenia ustawienia jasnosci ekranu.
-bool CommandProcessor::ProcessBrightnessSetCommand()
+int CommandProcessor::ProcessBrightnessSetCommand()
 {
     if (this->params_data == NULL || this->params_data == "")
     {
         this->RaiseInvalidParameterError("brightness set");
-        return false;
+        return COMMAND_NONE;
     }
 
     this->params_data.toLowerCase();
@@ -161,30 +161,28 @@ bool CommandProcessor::ProcessBrightnessSetCommand()
     if (this->params_data == "a" || this->params_data == "auto")
     {
         this->controller->SetAutoBrightness(true);
-        return true;
+        return COMMAND_PROCESSED_OK;
     }
     else if (this->IsCharacterADigit(this->params_data[0]))
     {
-        this->controller->SetAutoBrightness(false);
-
         int brightness = max(DISPLAY_MIN_BRIGHTNESS, min(this->params_data[0] - 48, DISPLAY_MAX_BRIGHTNESS));
-
+        this->controller->SetAutoBrightness(false);
         this->controller->display_ctrl->SetBrightness(brightness);
-        return true;
+        return COMMAND_PROCESSED_OK;
     }
     
     this->RaiseInvalidParameterError("brightness set");
-    return false;
+    return COMMAND_NONE;
 }
 
 //  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia ustawienia daty.
-bool CommandProcessor::ProcessDateSetCommand()
+int CommandProcessor::ProcessDateSetCommand()
 {
     if (this->params_data == NULL || this->params_data == "")
     {
         this->RaiseInvalidParameterError("date set");
-        return false;
+        return COMMAND_NONE;
     }
     
     int *data_array = new int[4] {0, 0, 0, 0};
@@ -198,8 +196,7 @@ bool CommandProcessor::ProcessDateSetCommand()
         int year = max(2000, min(2035, data_array[3]));
 
         this->controller->clock_ctrl->SetDate(day, week, month, year);
-        this->controller->input_command = COMMAND_DISPLAY_DATETIME;
-        return true;
+        return COMMAND_DISPLAY_DATETIME;
     }
     else if (last_step == 3)
     {
@@ -208,22 +205,21 @@ bool CommandProcessor::ProcessDateSetCommand()
         int year = max(2000, min(2035, data_array[2]));
 
         this->controller->clock_ctrl->SetDate(day, month, year);
-        this->controller->input_command = COMMAND_DISPLAY_DATETIME;
-        return true;
+        return COMMAND_DISPLAY_DATETIME;
     }
     
     this->RaiseInvalidParameterError("date set");
-    return false;
+    return COMMAND_NONE;
 }
 
 //  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia ustawienia czasu.
-bool CommandProcessor::ProcessTimeSetCommand()
+int CommandProcessor::ProcessTimeSetCommand()
 {
     if (this->params_data == NULL || this->params_data == "")
     {
         this->RaiseInvalidParameterError("time set");
-        return false;
+        return COMMAND_NONE;
     }
     
     int *data_array = new int[3] {0, 0, 0};
@@ -244,12 +240,11 @@ bool CommandProcessor::ProcessTimeSetCommand()
             this->controller->clock_ctrl->SetTime(hour, min);
         }
 
-        this->controller->input_command = COMMAND_DISPLAY_DATETIME;
-        return true;
+        return COMMAND_DISPLAY_DATETIME;
     }
 
     this->RaiseInvalidParameterError("time set");
-    return false;
+    return COMMAND_NONE;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -268,7 +263,7 @@ CommandProcessor::CommandProcessor(GlobalController * controller)
 /* Przetworzenie wprowadzonego polecenia wraz z argumentami i wykonanie okreslonego dzialania.
  * @return: Numer/identyfikator wprowadzonego polecenia.
  */
-bool CommandProcessor::ProcessCommand(String raw_data)
+int CommandProcessor::ProcessCommand(String raw_data)
 {
     //  Zwrocenie -1 w przypadku braku polecenia.
     if (raw_data == NULL || raw_data == "")
@@ -280,15 +275,18 @@ bool CommandProcessor::ProcessCommand(String raw_data)
 
     if (this->ValidateCommand("/brightness set"))
         return this->ProcessBrightnessSetCommand();
+        
     else if (this->ValidateCommand("/date set"))
         return this->ProcessDateSetCommand();
+
     else if (this->ValidateCommand("/time set"))
         return this->ProcessTimeSetCommand();
+
     else
         RaiseInvalidCommandError();
     
     this->Clear();
-    return false;
+    return COMMAND_NONE;
 }
 
 #endif
