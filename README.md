@@ -15,15 +15,15 @@ Software for handling Arduino multi-device clock device.
   - Hour
   - Brightness
   - Beep frequency
-  - *Alarm [IN FUTURE]*
+  - Alarm
 - Screen can change it brightness basing on the ambient brightness.
 - Performing configuration from serial port (additional debug informations can be send).
 - Performing configuration from bluetooth (no additional debug informations will be send).
 - It recognizes from which device message came and where send response.
+- Alarm
 
 ## In development:
 
-- Alarm.
 - Saving and reading configuration from SD card.
 - Showing message from bluetooth (from phone).
 - Weather - that will be send via serial port and storred in SD card.

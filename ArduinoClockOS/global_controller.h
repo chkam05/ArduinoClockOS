@@ -19,6 +19,7 @@
 #include "serial_controller.h"
 #include "temperature_sensor_controller.h"
 #include "alarm.h"
+#include "weather.h"
 
 
 ////////////////////////////////////////////////////////////////////////////////

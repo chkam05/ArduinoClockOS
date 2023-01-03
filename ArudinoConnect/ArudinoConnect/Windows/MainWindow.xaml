@@ -6,7 +6,7 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controlsex="clr-namespace:chkam05.Tools.ControlsEx;assembly=chkam05.Tools.ControlsEx"
     xmlns:conv="clr-namespace:ArudinoConnect.Converters"
-    xmlns:local="clr-namespace:ArudinoConnect.Windows"
+    xmlns:local="clr-namespace:ArudinoConnect.Windows" xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     mc:Ignorable="d"
     
     DataContext="{Binding RelativeSource={RelativeSource Self}}"
@@ -26,6 +26,194 @@
                 <TextBlock
                     Text="{Binding PortName}"/>
             </DataTemplate>
+
+            <HierarchicalDataTemplate x:Key="WeatherDataTreeViewTemplate" ItemsSource="{Binding Subitems}">
+                <StackPanel
+                    Orientation="Horizontal">
+
+                    <TextBlock
+                        Margin="0,0,8,0"
+                        Text="{Binding Name}"/>
+
+                    <TextBlock
+                        Text="{Binding Value}"/>
+                </StackPanel>
+            </HierarchicalDataTemplate>
+
+            <DataTemplate x:Key="WeatherDataHourlyViewItemTemplate">
+                <Border
+                    BorderBrush="Black"
+                    BorderThickness="1"
+                    CornerRadius="4"
+                    Padding="1"
+                    Width="56">
+                    
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock
+                            Grid.Row="0"
+                            HorizontalAlignment="Center"
+                            Text="{Binding Hour}"/>
+
+                        <materialDesign:PackIcon
+                            Grid.Row="1"
+                            Height="16"
+                            HorizontalAlignment="Center"
+                            Kind="{Binding WeatherIcon}"
+                            Width="16"/>
+
+                        <TextBlock
+                            Grid.Row="2"
+                            HorizontalAlignment="Center"
+                            Text="{Binding WeatherName}"
+                            TextAlignment="Center"
+                            TextWrapping="WrapWithOverflow"/>
+                    </Grid>
+                </Border>
+            </DataTemplate>
+
+            <DataTemplate x:Key="WeatherDataViewItemTemplate">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        HorizontalAlignment="Center"
+                        Margin="0,0,16,0"
+                        Text="{Binding Date}"
+                        VerticalAlignment="Top"/>
+
+                    <Grid
+                        Grid.Column="1">
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid
+                            Grid.Row="0">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="Auto"/>
+                            </Grid.RowDefinitions>
+
+                            <materialDesign:PackIcon
+                                Grid.Column="0"
+                                Grid.Row="0"
+                                Height="12"
+                                Kind="Sunrise"
+                                Margin="0,0,4,0"
+                                Width="12"/>
+
+                            <TextBlock
+                                Grid.Column="1"
+                                Grid.Row="0"
+                                Margin="0,0,4,0"
+                                Text="Sunrise:"/>
+
+                            <TextBlock
+                                Grid.Column="2"
+                                Grid.Row="0"
+                                Margin="0,0,8,0"
+                                Text="{Binding Sunrise}"/>
+
+                            <materialDesign:PackIcon
+                                Grid.Column="3"
+                                Grid.Row="0"
+                                Height="12"
+                                Kind="WeatherSunset"
+                                Margin="0,0,4,0"
+                                Width="12"/>
+
+                            <TextBlock
+                                Grid.Column="4"
+                                Grid.Row="0"
+                                Margin="0,0,4,0"
+                                Text="Sunset:"/>
+
+                            <TextBlock
+                                Grid.Column="5"
+                                Grid.Row="0"
+                                Margin="0,0,8,0"
+                                Text="{Binding Sunset}"/>
+
+                            <materialDesign:PackIcon
+                                Grid.Column="0"
+                                Grid.Row="1"
+                                Height="12"
+                                Kind="MoonFull"
+                                Margin="0,0,4,0"
+                                Width="12"/>
+
+                            <TextBlock
+                                Grid.Column="1"
+                                Grid.Row="1"
+                                Margin="0,0,4,0"
+                                Text="Moonrise:"/>
+
+                            <TextBlock
+                                Grid.Column="2"
+                                Grid.Row="1"
+                                Margin="0,0,8,0"
+                                Text="{Binding Moonrise}"/>
+
+                            <materialDesign:PackIcon
+                                Grid.Column="3"
+                                Grid.Row="1"
+                                Height="12"
+                                Kind="MoonNew"
+                                Margin="0,0,4,0"
+                                Width="12"/>
+
+                            <TextBlock
+                                Grid.Column="4"
+                                Grid.Row="1"
+                                Margin="0,0,4,0"
+                                Text="Moonset:"/>
+
+                            <TextBlock
+                                Grid.Column="5"
+                                Grid.Row="1"
+                                Margin="0,0,8,0"
+                                Text="{Binding Moonset}"/>
+
+                        </Grid>
+
+                        <controlsex:ListViewEx
+                            BorderBrush="{x:Null}"
+                            BorderThickness="0"
+                            CornerRadius="0"
+                            Grid.Row="1"
+                            ItemsSource="{Binding HourlyWeather}"
+                            ItemTemplate="{StaticResource WeatherDataHourlyViewItemTemplate}">
+                            <controlsex:ListViewEx.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <WrapPanel Orientation="Horizontal"/>
+                                </ItemsPanelTemplate>
+                            </controlsex:ListViewEx.ItemsPanel>
+                        </controlsex:ListViewEx>
+                    </Grid>
+                </Grid>
+            </DataTemplate>
             
         </ResourceDictionary>
     </Window.Resources>
@@ -39,10 +227,14 @@
         </Grid.RowDefinitions>
 
         <controlsex:TabControlEx
+            HeaderBackground="LightGray"
+            HeaderBorderBrush="DarkGray"
+            CornerRadius="0"
             Grid.Row="2">
 
             <controlsex:TabItemEx
                 IconKind="Console"
+                IconWidth="18"
                 Header="Console">
 
                 <Grid>
@@ -107,12 +299,121 @@
                 </Grid>
             </controlsex:TabItemEx>
 
+            <controlsex:TabItemEx
+                IconKind="WeatherSunny"
+                IconWidth="18"
+                Header="Weather">
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Grid
+                        Grid.Row="0">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*" MinWidth="256"/>
+                        </Grid.ColumnDefinitions>
+
+                        <controlsex:ListViewEx
+                            BorderBrush="{x:Null}"
+                            BorderThickness="0"
+                            CornerRadius="0"
+                            ItemsSource="{Binding WeatherViewData}"
+                            ItemTemplate="{StaticResource WeatherDataViewItemTemplate}"
+                            Margin="0,0,4,0"
+                            ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                            ScrollViewer.VerticalScrollBarVisibility="Visible"/>
+
+                        <GridSplitter
+                            Grid.Column="0">
+
+                            <GridSplitter.Template>
+                                <ControlTemplate>
+                                    <Border
+                                        Background="DarkGray"
+                                        Width="5">
+
+                                        <materialDesign:PackIcon
+                                            Foreground="Black"
+                                            HorizontalAlignment="Center"
+                                            Kind="MoreVert"
+                                            VerticalAlignment="Center"
+                                            Width="10"/>
+
+                                    </Border>
+                                </ControlTemplate>
+                            </GridSplitter.Template>
+                        </GridSplitter>
+
+                        <controlsex:TreeViewEx
+                            BorderBrush="{x:Null}"
+                            BorderThickness="0"
+                            CornerRadius="0"
+                            Grid.Column="2"
+                            ItemsSource="{Binding WeatherTreeData}"
+                            ItemTemplate="{StaticResource WeatherDataTreeViewTemplate}"/>
+                    </Grid>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,1,0,0"
+                        Grid.Row="1">
+
+                        <Grid
+                            Grid.Row="1"
+                            Margin="4">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Grid.Column="1"
+                                    Content="Upload to Arduino"
+                                    IconHeight="12"
+                                    IconKind="TrayUpload"
+                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    Margin="0,0,4,0"
+                                    Click="DownloadWeatherButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Grid.Column="1"
+                                    Content="Download"
+                                    IconHeight="12"
+                                    IconKind="Download"
+                                    Click="DownloadWeatherButtonEx_Click"/>
+
+                            </StackPanel>
+
+                        </Grid>
+                    </Border>
+                </Grid>
+            </controlsex:TabItemEx>
+
+            <controlsex:TabItemEx
+                IconKind="Wrench"
+                IconWidth="18"
+                Header="Settings">
+
+            </controlsex:TabItemEx>
+
         </controlsex:TabControlEx>
 
         <Border
             Background="LightGray"
             BorderBrush="DarkGray"
-            BorderThickness="0,0,0,1"
+            BorderThickness="0"
             Grid.Row="0">
 
             <Grid>

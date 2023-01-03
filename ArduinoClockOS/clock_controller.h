@@ -9,8 +9,6 @@
 //  *** INCLUDED LIBRARIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
-#include <Arduino.h>
-#include <avr/pgmspace.h>
 #include <DS3231.h>
 
 

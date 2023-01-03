@@ -46,6 +46,9 @@
     <Reference Include="MaterialDesignThemes.Wpf, Version=4.5.0.0, Culture=neutral, PublicKeyToken=df2a72020bd7962a, processorArchitecture=MSIL">
       <HintPath>..\packages\MaterialDesignThemes.4.5.0\lib\net452\MaterialDesignThemes.Wpf.dll</HintPath>
     </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Management" />
@@ -74,9 +77,15 @@
     <Compile Include="Converters\BoolInversionConverter.cs" />
     <Compile Include="Converters\SerialPortStateStringConverter.cs" />
     <Compile Include="Data\ComPort.cs" />
+    <Compile Include="Data\WeatherData.cs" />
+    <Compile Include="Data\WeatherResponse.cs" />
+    <Compile Include="Data\WeatherTreeItem.cs" />
+    <Compile Include="Data\WeatherViewItem.cs" />
     <Compile Include="Events\SerialPortReceivedMessageEventArgs.cs" />
+    <Compile Include="Mappers\WeatherDataMappers.cs" />
     <Compile Include="Static\ReceivedMessageState.cs" />
     <Compile Include="Utilities\SerialPortConnection.cs" />
+    <Compile Include="Utilities\WeatherDownloader.cs" />
     <Compile Include="Windows\MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
     </Compile>

@@ -32,6 +32,8 @@ namespace ArudinoConnect.Windows
 
         private ObservableCollection<int> _baudRatesCollection;
         private ObservableCollection<ComPort> _devicesCollection;
+        private ObservableCollection<WeatherTreeItem> _weatherTreeData;
+        private ObservableCollection<WeatherViewItem> _weatherViewData;
         private int _baudRate;
         private ComPort _selectedDevice;
         private SerialPortConnection _serialPortConnection;
@@ -61,6 +63,28 @@ namespace ArudinoConnect.Windows
                 _devicesCollection = value;
                 _devicesCollection.CollectionChanged += (s, e) => OnPropertyChanged(nameof(DevicesCollection));
                 OnPropertyChanged(nameof(DevicesCollection));
+            }
+        }
+
+        public ObservableCollection<WeatherTreeItem> WeatherTreeData
+        {
+            get => _weatherTreeData;
+            set
+            {
+                _weatherTreeData = value;
+                _weatherTreeData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherTreeData)); };
+                OnPropertyChanged(nameof(WeatherTreeData));
+            }
+        }
+
+        public ObservableCollection<WeatherViewItem> WeatherViewData
+        {
+            get => _weatherViewData;
+            set
+            {
+                _weatherViewData = value;
+                _weatherViewData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherViewData)); };
+                OnPropertyChanged(nameof(WeatherViewData));
             }
         }
 
@@ -250,6 +274,31 @@ namespace ArudinoConnect.Windows
         }
 
         #endregion SETUP METHODS
+
+        #region WEATHER METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on DownloadWeather. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed event arguments. </param>
+        private void DownloadWeatherButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            var downloader = new WeatherDownloader("Katowice");
+            var response = downloader.DownloadWeather();
+
+            if (response.Success && response.Data != null)
+            {
+                WeatherViewData = new ObservableCollection<WeatherViewItem>(
+                    response.Data.Weather.Select(w => new WeatherViewItem(w)));
+
+                WeatherTreeData = new ObservableCollection<WeatherTreeItem>()
+                {
+                    response.Data.ToWeatherTreeItem()
+                };
+            }
+        }
+
+        #endregion WEATHER METHODS
 
     }
 }
