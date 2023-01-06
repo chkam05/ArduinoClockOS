@@ -75,8 +75,12 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Converters\BoolInversionConverter.cs" />
+    <Compile Include="Converters\HourBeepTupleConverter.cs" />
     <Compile Include="Converters\SerialPortStateStringConverter.cs" />
+    <Compile Include="Data\CommandResult.cs" />
     <Compile Include="Data\ComPort.cs" />
+    <Compile Include="Data\ConfigCommandCarrier.cs" />
+    <Compile Include="Data\ConfigCommandResult.cs" />
     <Compile Include="Data\WeatherData.cs" />
     <Compile Include="Data\WeatherResponse.cs" />
     <Compile Include="Data\WeatherTreeItem.cs" />

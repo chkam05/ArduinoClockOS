@@ -150,7 +150,7 @@ int MenuController::GetMinItem()
 }
 
 //  ----------------------------------------------------------------------------
-/*  Powrot do nastepnego podmenu lub wybranie opcji z menu.
+/*  Przejscie do nastepnego podmenu lub wybranie opcji z menu.
  *  @return: Indeks wybranego menu, opcji, badz 0 - powrot.
  */
 int MenuController::NavigateForward()

@@ -35,15 +35,18 @@ class SdCardController
 
         bool  initialized = false;
         bool  mounted = false;
+        bool  rw_ready = false;
     
     public:
         SdCardController();
 
+        //  Initialization.
         void      Initialize();
         void      Mount();
         bool      IsInitialized();
         bool      IsMounted();
 
+        //  Informations Getting.
         String    GetCardType();
         uint32_t  GetPartitionBlocks();
         uint32_t  GetPartitionClusters();
@@ -51,6 +54,15 @@ class SdCardController
         uint32_t  GetPartitionSize();
         float     GetPartitionSizeInGB();
         uint32_t  GetPartitionSizeInMB();
+
+        //  Files Management.
+        void  CreateDirectory(String directory_path);
+        bool  FileExists(String file_path);
+        File  OpenFileToAppend(String file_path);
+        File  OpenFileToRead(String file_path);
+        File  OpenFileToWrite(String file_path);
+        void  RemoveDirectory(String directory_path);
+        void  RemoveFile(String file_path);
 };
 
 
@@ -65,7 +77,10 @@ SdCardController::SdCardController()
     this->Mount();
 }
 
-//  ----------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//  *** PUBLIC INITIALIZATION METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
 //  Inicjalizacja kontrolera czytnika kart SD.
 void SdCardController::Initialize()
 {
@@ -80,7 +95,10 @@ void SdCardController::Initialize()
 void SdCardController::Mount()
 {
     if (this->initialized)
+    {
         this->mounted = this->_partition.init(this->_device);
+        this->rw_ready = SD.begin(SDCARD_PIN_CS);
+    }
 }
 
 //  ----------------------------------------------------------------------------
@@ -98,10 +116,13 @@ bool SdCardController::IsInitialized()
  */
 bool SdCardController::IsMounted()
 {
-    return this->mounted;
+    return this->mounted && this->rw_ready;
 }
 
-//  ----------------------------------------------------------------------------
+////////////////////////////////////////////////////////////////////////////////
+//  *** PUBLIC INFORMATIONS GETTING METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
 /* Pobranie typu zamontowanej karty SD.
  * @return: Typ zamontowanej karty SD.
  */
@@ -203,6 +224,58 @@ uint32_t SdCardController::GetPartitionSizeInMB()
     if (this->initialized && this->mounted)
         return this->GetPartitionSize() / 1024;
     return 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** PUBLIC FILES MANAGEMENT METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+void SdCardController::CreateDirectory(String directory_path)
+{
+    SD.mkdir(directory_path);
+}
+
+//  ----------------------------------------------------------------------------
+bool SdCardController::FileExists(String file_path)
+{
+    return SD.exists(file_path);
+}
+
+//  ----------------------------------------------------------------------------
+File SdCardController::OpenFileToAppend(String file_path)
+{
+    File file = SD.open(file_path, FILE_WRITE);
+    file.seek(EOF);
+
+    return file;
+}
+
+//  ----------------------------------------------------------------------------
+File SdCardController::OpenFileToRead(String file_path)
+{
+    return SD.open(file_path, FILE_READ);
+}
+
+//  ----------------------------------------------------------------------------
+File SdCardController::OpenFileToWrite(String file_path)
+{
+    if (this->FileExists(file_path))
+        this->RemoveFile(file_path);
+    
+    return SD.open(file_path, FILE_WRITE);
+}
+
+//  ----------------------------------------------------------------------------
+void SdCardController::RemoveFile(String file_path)
+{
+    if (this->FileExists(file_path))
+        SD.remove(file_path);
+}
+
+//  ----------------------------------------------------------------------------
+void SdCardController::RemoveDirectory(String directory_path)
+{
+    SD.rmdir(directory_path);
 }
 
 #endif

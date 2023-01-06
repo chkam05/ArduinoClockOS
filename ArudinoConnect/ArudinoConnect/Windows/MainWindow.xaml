@@ -6,25 +6,33 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controlsex="clr-namespace:chkam05.Tools.ControlsEx;assembly=chkam05.Tools.ControlsEx"
     xmlns:conv="clr-namespace:ArudinoConnect.Converters"
-    xmlns:local="clr-namespace:ArudinoConnect.Windows" xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:im="clr-namespace:chkam05.Tools.ControlsEx.InternalMessages;assembly=chkam05.Tools.ControlsEx"
+    xmlns:local="clr-namespace:ArudinoConnect.Windows"
+    xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
     mc:Ignorable="d"
     
     DataContext="{Binding RelativeSource={RelativeSource Self}}"
     Title="Arduino Connect"
-    Height="450"
-    Width="800">
+    Height="500"
+    Width="900">
 
     <Window.Resources>
         <ResourceDictionary>
             
             <!-- CONVERTERS -->
             <conv:BoolInversionConverter x:Key="BoolInversionConverter"/>
+            <conv:HourBeepTupleConverter x:Key="HourBeepTupleConverter"/>
             <conv:SerialPortStateStringConverter x:Key="SerialPortStateStringConverter"/>
 
             <!-- DATA TEMPLATES -->
             <DataTemplate x:Key="DevicesDataTemplate">
                 <TextBlock
                     Text="{Binding PortName}"/>
+            </DataTemplate>
+
+            <DataTemplate x:Key="HourBeepDataTemplate">
+                <TextBlock
+                    Text="{Binding Converter={StaticResource HourBeepTupleConverter}, Mode=OneWay}"/>
             </DataTemplate>
 
             <HierarchicalDataTemplate x:Key="WeatherDataTreeViewTemplate" ItemsSource="{Binding Subitems}">
@@ -227,6 +235,7 @@
         </Grid.RowDefinitions>
 
         <controlsex:TabControlEx
+            x:Name="MainTabControlEx"
             HeaderBackground="LightGray"
             HeaderBorderBrush="DarkGray"
             CornerRadius="0"
@@ -251,6 +260,7 @@
                         BorderBrush="{x:Null}"
                         BorderThickness="0"
                         CornerRadius="0"
+                        FontFamily="Cascadia Code PL Light"
                         Grid.Row="0"
                         HorizontalContentAlignment="Left"
                         IsReadOnly="True"
@@ -259,7 +269,8 @@
                         ScrollViewer.VerticalScrollBarVisibility="Visible"
                         Text="{Binding Console, Mode=OneWay}"
                         TextWrapping="NoWrap"
-                        VerticalAlignment="Top"/>
+                        VerticalAlignment="Stretch"
+                        VerticalContentAlignment="Top"/>
 
                     <Border
                         Background="LightGray"
@@ -315,8 +326,8 @@
                         Grid.Row="0">
 
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*" MinWidth="256"/>
+                            <ColumnDefinition Width="*" MinWidth="384"/>
+                            <ColumnDefinition Width="Auto" MinWidth="256"/>
                         </Grid.ColumnDefinitions>
 
                         <controlsex:ListViewEx
@@ -343,7 +354,7 @@
                                             HorizontalAlignment="Center"
                                             Kind="MoreVert"
                                             VerticalAlignment="Center"
-                                            Width="10"/>
+                                            Width="12"/>
 
                                     </Border>
                                 </ControlTemplate>
@@ -385,7 +396,7 @@
                                     IconKind="TrayUpload"
                                     IsEnabled="{Binding SerialPortConnection.IsConnected}"
                                     Margin="0,0,4,0"
-                                    Click="DownloadWeatherButtonEx_Click"/>
+                                    Click="UploadWeatherButtonEx_Click"/>
 
                                 <controlsex:ButtonEx
                                     Grid.Column="1"
@@ -402,9 +413,406 @@
             </controlsex:TabItemEx>
 
             <controlsex:TabItemEx
+                x:Name="SettingsTabItemEx"
                 IconKind="Wrench"
                 IconWidth="18"
                 Header="Settings">
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <controlsex:ScrollViewerEx
+                        Grid.Row="0">
+
+                        <WrapPanel
+                            Margin="4"
+                            Orientation="Horizontal">
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                MinWidth="192"
+                                Padding="8">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel
+                                        Grid.Row="0"
+                                        Orientation="Vertical">
+
+                                        <TextBlock
+                                            Margin="0,0,0,4"
+                                            Text="Date:"/>
+
+                                        <StackPanel
+                                            Orientation="Horizontal">
+
+                                            <controlsex:UpDownTextBoxEx
+                                                x:Name="DtYearUpDownTextBoxEx"
+                                                ConversionType="Decimal"
+                                                MinValue="2000"
+                                                MaxValue="2035"
+                                                Text="{Binding DtYear}"
+                                                Width="54"
+                                                TextModified="DtUpDownTextBoxEx_TextModified"/>
+
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="Bold"
+                                                Margin="1,0"
+                                                Text="."
+                                                VerticalAlignment="Bottom"/>
+
+                                            <controlsex:UpDownTextBoxEx
+                                                x:Name="DtMonthUpDownTextBoxEx"
+                                                ConversionType="Decimal"
+                                                MinValue="1"
+                                                MaxValue="12"
+                                                Text="{Binding DtMonth}"
+                                                Width="54"
+                                                TextModified="DtUpDownTextBoxEx_TextModified"/>
+
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="Bold"
+                                                Margin="1,0"
+                                                Text="."
+                                                VerticalAlignment="Bottom"/>
+
+                                            <controlsex:UpDownTextBoxEx
+                                                ConversionType="Decimal"
+                                                MinValue="1"
+                                                MaxValue="{Binding DtDayMax}"
+                                                Text="{Binding DtDay}"
+                                                Width="54"/>
+
+                                        </StackPanel>
+
+                                        <TextBlock
+                                            Margin="0,4,0,4"
+                                            Text="Time:"/>
+
+                                        <StackPanel
+                                            Orientation="Horizontal">
+
+                                            <controlsex:UpDownTextBoxEx
+                                                MinValue="0"
+                                                MaxValue="23"
+                                                Text="{Binding DtHour}"
+                                                Width="54"/>
+
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="Bold"
+                                                Margin="1,0"
+                                                Text=":"
+                                                VerticalAlignment="Center"/>
+
+                                            <controlsex:UpDownTextBoxEx
+                                                ConversionType="Decimal"
+                                                MinValue="0"
+                                                MaxValue="59"
+                                                Text="{Binding DtMinute}"
+                                                Width="54"/>
+
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="Bold"
+                                                Margin="1,0"
+                                                Text=":"
+                                                VerticalAlignment="Center"/>
+
+                                            <controlsex:UpDownTextBoxEx
+                                                ConversionType="Decimal"
+                                                MinValue="0"
+                                                MaxValue="59"
+                                                Text="{Binding DtSecond}"
+                                                Width="54"/>
+
+                                        </StackPanel>
+
+                                        <controlsex:CheckBoxEx
+                                            CheckMarkHeight="24"
+                                            CheckBoxStyle="Bordered"
+                                            CheckMarkWidth="24"
+                                            Content="System date &amp; time"
+                                            IsChecked="{Binding DtAuto}"
+                                            Margin="0,8,0,0"/>
+
+                                    </StackPanel>
+
+                                    <Border
+                                        BorderBrush="Black"
+                                        BorderThickness="0,1,0,0"
+                                        Grid.Row="1"
+                                        Margin="-8,8,-8,0">
+
+                                        <controlsex:ButtonEx
+                                            Content="Upload"
+                                            HorizontalAlignment="Right"
+                                            IconHeight="12"
+                                            IconKind="TrayUpload"
+                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            Margin="8,8,8,0"
+                                            Padding="8,4"
+                                            Click="UploadDateTimeConfigurationButtonEx_Click"/>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                MinWidth="192"
+                                Padding="8">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel
+                                        Orientation="Vertical">
+
+                                        <TextBlock
+                                            Margin="0,0,0,4"
+                                            Text="Alarm:"/>
+
+                                        <StackPanel
+                                            Orientation="Horizontal">
+
+                                            <controlsex:UpDownTextBoxEx
+                                                MinValue="0"
+                                                MaxValue="23"
+                                                Text="{Binding AlarmHour}"
+                                                Width="54"/>
+
+                                            <TextBlock
+                                                FontSize="16"
+                                                FontWeight="Bold"
+                                                Margin="1,0"
+                                                Text=":"
+                                                VerticalAlignment="Center"/>
+
+                                            <controlsex:UpDownTextBoxEx
+                                                ConversionType="Decimal"
+                                                MinValue="0"
+                                                MaxValue="59"
+                                                Text="{Binding AlarmMinute}"
+                                                Width="54"/>
+
+                                        </StackPanel>
+
+                                        <controlsex:CheckBoxEx
+                                            CheckMarkHeight="24"
+                                            CheckBoxStyle="Bordered"
+                                            CheckMarkWidth="24"
+                                            Content="Enabled"
+                                            IsChecked="{Binding AlarmSet}"
+                                            Margin="0,8,0,0"/>
+
+                                    </StackPanel>
+
+                                    <Border
+                                        BorderBrush="Black"
+                                        BorderThickness="0,1,0,0"
+                                        Grid.Row="1"
+                                        Margin="-8,8,-8,0">
+
+                                        <controlsex:ButtonEx
+                                            Content="Upload"
+                                            HorizontalAlignment="Right"
+                                            IconHeight="12"
+                                            IconKind="TrayUpload"
+                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            Margin="8,8,8,0"
+                                            Padding="8,4"
+                                            Click="UploadAlarmConfigurationButtonEx_Click"/>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                MinWidth="192"
+                                Padding="8">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel
+                                        Orientation="Vertical">
+
+                                        <TextBlock
+                                            Margin="0,0,0,8"
+                                            Text="Brightness:"/>
+
+                                        <controlsex:SliderEx
+                                            HorizontalAlignment="Stretch"
+                                            Minimum="0"
+                                            Maximum="8"
+                                            Margin="8,0"
+                                            ThumbCornerRadius="8"
+                                            ThumbHeight="12"
+                                            ThumbWidth="12"
+                                            TickPlacement="Both"
+                                            TickFrequency="1"
+                                            Value="{Binding Brightness}"/>
+
+                                        <controlsex:CheckBoxEx
+                                            CheckMarkHeight="24"
+                                            CheckBoxStyle="Bordered"
+                                            CheckMarkWidth="24"
+                                            Content="Auto"
+                                            IsChecked="{Binding BrightnessAuto}"
+                                            Margin="0,8,0,0"/>
+
+                                    </StackPanel>
+
+                                    <Border
+                                        BorderBrush="Black"
+                                        BorderThickness="0,1,0,0"
+                                        Grid.Row="1"
+                                        Margin="-8,8,-8,0">
+
+                                        <controlsex:ButtonEx
+                                            Content="Upload"
+                                            HorizontalAlignment="Right"
+                                            IconHeight="12"
+                                            IconKind="TrayUpload"
+                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            Margin="8,8,8,0"
+                                            Padding="8,4"
+                                            Click="UploadBrightnessConfigurationButtonEx_Click"/>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                MinWidth="192"
+                                Padding="8">
+
+                                <Grid>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="*"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel
+                                        Orientation="Vertical">
+
+                                        <TextBlock
+                                            Margin="0,0,0,4"
+                                            Text="Hour Beeping:"/>
+
+                                        <controlsex:ComboBoxEx
+                                            ItemTemplate="{StaticResource HourBeepDataTemplate}"
+                                            ItemsSource="{Binding HourBeepCollection}"
+                                            MinWidth="128"
+                                            SelectedItem="{Binding HourBeep}"/>
+
+                                    </StackPanel>
+
+                                    <Border
+                                        BorderBrush="Black"
+                                        BorderThickness="0,1,0,0"
+                                        Grid.Row="1"
+                                        Margin="-8,8,-8,0">
+
+                                        <controlsex:ButtonEx
+                                            Content="Upload"
+                                            HorizontalAlignment="Right"
+                                            IconHeight="12"
+                                            IconKind="TrayUpload"
+                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            Margin="8,8,8,0"
+                                            Padding="8,4"
+                                            Click="UploadHourBeepConfigurationButtonEx_Click"/>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                        </WrapPanel>
+                        
+                    </controlsex:ScrollViewerEx>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,1,0,0"
+                        Grid.Row="1">
+
+                        <Grid
+                            Grid.Row="1"
+                            Margin="4">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Grid.Column="1"
+                                    Content="Upload to Arduino"
+                                    IconHeight="12"
+                                    IconKind="TrayUpload"
+                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    Margin="0,0,4,0"
+                                    Click="UploadAllConfigurationButtonEx_Click"/>
+                                
+                                <controlsex:ButtonEx
+                                    Grid.Column="1"
+                                    Content="Load from Arduino"
+                                    IconHeight="12"
+                                    IconKind="TrayDownload"
+                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    Click="DownloadConfigurationButtonEx_Click"/>
+
+                            </StackPanel>
+
+                        </Grid>
+                    </Border>
+
+                </Grid>
 
             </controlsex:TabItemEx>
 
@@ -455,6 +863,10 @@
             </Grid>
 
         </Border>
+
+        <im:InternalMessagesExContainer
+            x:Name="InternalMessagesExContainer"
+            Grid.RowSpan="3"/>
 
     </Grid>
     

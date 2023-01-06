@@ -49,7 +49,7 @@ class Alarm
         bool  IsEnabled();
 
         void  DisableAlarm();
-        void  SetAlarm(int hour, int minute);
+        void  SetAlarm(int hour, int minute, bool enabled = true);
         int   ProcessInput(char key);
 };
 
@@ -58,6 +58,10 @@ class Alarm
 //  *** PRIVATE METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+/*  Sprawdzenie godziny uruchomienia alarmu i jego uruchomienie
+ *  @param now_time: Aktualna data i czas.
+ *  @return: True - uruchomienie alarmu; False - w innym przypadku.
+ */
 bool Alarm::CheckBaseTrigger(Time now_time)
 {
     if (!this->has_been_raised && now_time.hour == this->hour && now_time.min == this->minute)
@@ -76,6 +80,10 @@ bool Alarm::CheckBaseTrigger(Time now_time)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Sprawdzenie czasu dzialania drzemki i przywrocenie dzialania alarmu.
+ *  @param now_time: Aktualna data i czas.
+ *  @return: True - ponowne uruchomienie alarmu; False - w innym przypadku.
+ */
 bool Alarm::CheckSuspendedTrigger(Time now_time)
 {
     if (this->set_sleep_time)
@@ -107,12 +115,17 @@ bool Alarm::CheckSuspendedTrigger(Time now_time)
 //  *** PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Konstruktor klasy modulu alarmu.
 Alarm::Alarm()
 {
     //
 }
 
 //  ----------------------------------------------------------------------------
+/*  Sprawdzenie godziny uruchomienia alarmu i jego uruchomienie
+ *  @param now_time: Aktualna data i czas.
+ *  @return: True - uruchomienie alarmu; False - w innym przypadku.
+ */
 bool Alarm::CheckTrigger(Time now_time)
 {
     if (this->enabled)
@@ -134,18 +147,25 @@ bool Alarm::CheckTrigger(Time now_time)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Pobranie aktualnego stanu alarmu (dzwoni, drzemka, nieaktywny).
+ *  @return: Indeks stanu alarmu.
+ */
 int Alarm::GetState()
 {
     return this->alarm_state;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Pobranie informacji o uzbrojeniu alarmu.
+ *  @return: True - alarm uzbrojony; False - w innym przypadku.
+ */
 bool Alarm::IsEnabled()
 {
     return this->enabled;
 }
 
 //  ----------------------------------------------------------------------------
+//  Rozbrojenie alarmu.
 void Alarm::DisableAlarm()
 {
     this->alarm_state = ALARM_DISARMED;
@@ -153,15 +173,23 @@ void Alarm::DisableAlarm()
 }
 
 //  ----------------------------------------------------------------------------
-void Alarm::SetAlarm(int hour, int minute)
+/*  Ustawienie godziny uruchomienia alarmu.
+ *  @param hour: Godzina uruchomienia alarmu.
+ *  @param minute: Minuta uruchomienia alarmu.
+ */
+void Alarm::SetAlarm(int hour, int minute, bool enabled = true)
 {
     this->alarm_state = ALARM_DISARMED;
     this->hour = hour;
     this->minute = minute;
-    this->enabled = true;
+    this->enabled = enabled;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Przetworzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury.
+ *  @param input: Dane wejsciowe z klawiatury (wcisniety klawisz).
+ *  @return: Indeks wykonanego procesu przez kontroler alarmu.
+ */
 int Alarm::ProcessInput(char key)
 {
     switch (key)

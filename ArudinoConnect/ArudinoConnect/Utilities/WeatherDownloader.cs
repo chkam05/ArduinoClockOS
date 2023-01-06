@@ -23,6 +23,7 @@ namespace ArudinoConnect.Utilities
         //  VARIABLES
 
         public string City { get; set; }
+        public int TimeOut { get; set; }
 
 
         //  METHODS
@@ -32,9 +33,10 @@ namespace ArudinoConnect.Utilities
         //  --------------------------------------------------------------------------------
         /// <summary> WeatherDownloader class constructor. </summary>
         /// <param name="city"> City for which the weather is checked. </param>
-        public WeatherDownloader(string city = null)
+        public WeatherDownloader(string city = null, int timeOut = 5000)
         {
             City = !string.IsNullOrEmpty(city) ? city : string.Empty;
+            TimeOut = timeOut;
         }
 
         #endregion CLASS METHODS
@@ -51,6 +53,7 @@ namespace ArudinoConnect.Utilities
             var url = string.Format(URL, City);
 
             client.DefaultRequestHeaders.Accept.Add(meidaType);
+            client.Timeout = TimeSpan.FromMilliseconds(TimeOut);
 
             var response = new WeahterResponse();
 

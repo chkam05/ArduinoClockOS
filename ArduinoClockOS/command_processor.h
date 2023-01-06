@@ -28,13 +28,24 @@ class CommandProcessor
         void  Clear();
         bool  IsCharacterADigit(char c);
         int   ParseMultiNumberData(int *data_array, int data_size);
+        int   ParseNumberData(int &value);
         bool  ValidateCommand(String command);
 
         //  Errors.
+        void  NotifyConfigurationUpdated();
         void  RaiseInvalidCommandError();
         void  RaiseInvalidParameterError(String command);
 
         //  Management methods.
+        int   ProcessAlarmGetCommand();
+        int   ProcessBeepGetCommand();
+        int   ProcessBrightnessGetCommand();
+        int   ProcessDateGetCommand();
+        int   ProcessIsInitializedCommand();
+        int   ProcessTimeGetCommand();
+
+        int   ProcessAlarmSetCommand();
+        int   ProcessBeepSetCommand();
         int   ProcessBrightnessSetCommand();
         int   ProcessDateSetCommand();
         int   ProcessTimeSetCommand();
@@ -100,6 +111,34 @@ int CommandProcessor::ParseMultiNumberData(int *data_array, int data_size)
 }
 
 //  ----------------------------------------------------------------------------
+/* Konwersja ciaglych argumentow na argumenty liczbowe w postaci tablicy.
+ * @param *data_array: Wskaznik do tablicy bedacej tablica wynikowa.
+ * @param data_size: Wielkosc tablicy wynikowej.
+ * @return: Ilosc wypelnionych pol w tablicy wynikowej.
+ */
+int CommandProcessor::ParseNumberData(int &value)
+{
+    //  Inicjalizacja zmiennych roboczych/wynikowych.
+    int data_length = this->params_data.length();
+    String worker = "";
+
+    //  Przetworzenie danych wejsciowych na dane liczbowe.
+    for (int c = 0; c <= data_length; c++)
+    {
+        if (this->IsCharacterADigit(this->params_data[c]))
+            worker += this->params_data[c];
+
+        else if (worker != "")
+        {
+            value = worker.toInt();
+            return c;
+        }
+    }
+
+    return 0;
+}
+
+//  ----------------------------------------------------------------------------
 /* Sprawdzenie czy wprowadzone dane zawieraja okreslone polecenie.
  * @param command: Polecenie do sprawdzenia (czy istnieje w wprowadzonych danych).
  * @return: Informacja o tym czy polecenie zostalo wprowadzone.
@@ -124,6 +163,15 @@ bool CommandProcessor::ValidateCommand(String command)
 //  *** PRIVATE ERRORS METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Powiadomienie o poprawnym wykonaniu polecenia.
+void CommandProcessor::NotifyConfigurationUpdated()
+{
+    this->controller->serial_ctrl->WriteRawData(
+        "OK",
+        this->controller->serial_ctrl->GetLastInputDevice());
+}
+
+//  ----------------------------------------------------------------------------
 //  Wyswietlenie bledu - niepoprawne polecenie.
 void CommandProcessor::RaiseInvalidCommandError()
 {
@@ -144,9 +192,162 @@ void CommandProcessor::RaiseInvalidParameterError(String command)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-//  *** PRIVATE MANAGEMENT METHOD BODIES ***
+//  *** PRIVATE GET MANAGEMENT METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Przetworzenie polecenia pobrania ustawien alarmu.
+int CommandProcessor::ProcessAlarmGetCommand()
+{
+    String output = String(this->controller->alarm->hour) + ":" + String(this->controller->alarm->minute);
+    output += this->controller->alarm->IsEnabled() ? " ON" : " OFF";
+
+    this->controller->serial_ctrl->WriteRawData(
+        output,
+        this->controller->serial_ctrl->GetLastInputDevice());
+    
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia pobrania ustawien brzeczyka godzinowego.
+int CommandProcessor::ProcessBeepGetCommand()
+{
+    int value = this->controller->GetBuzzerHourNotifierInterval();
+
+    this->controller->serial_ctrl->WriteRawData(
+        (value == 0 ? "OFF" : String(value)),
+        this->controller->serial_ctrl->GetLastInputDevice());
+    
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia pobrania ustawien jasnosci ekranu.
+int CommandProcessor::ProcessBrightnessGetCommand()
+{
+    int value = this->controller->display_ctrl->GetBrightness();
+
+    this->controller->serial_ctrl->WriteRawData(
+        (this->controller->IsAutoBrightness() ? "AUTO" : String(value)),
+        this->controller->serial_ctrl->GetLastInputDevice());
+
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia pobrania ustawien daty.
+int CommandProcessor::ProcessDateGetCommand()
+{
+    this->controller->serial_ctrl->WriteRawData(
+        this->controller->clock_ctrl->GetDate("wDMY", '.'),
+        this->controller->serial_ctrl->GetLastInputDevice());
+    
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Pobranie informacji czy oprogramowanie zostalo zainicjalizowane.
+int CommandProcessor::ProcessIsInitializedCommand()
+{
+    this->controller->serial_ctrl->WriteRawData(
+        (this->controller->IsInitialized() ? "YES" : "NO"),
+        this->controller->serial_ctrl->GetLastInputDevice());
+    
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia pobrania ustawien czasu.
+int CommandProcessor::ProcessTimeGetCommand()
+{
+    this->controller->serial_ctrl->WriteRawData(
+        this->controller->clock_ctrl->GetTime("HMS", ':'),
+        this->controller->serial_ctrl->GetLastInputDevice());
+    
+    return COMMAND_NONE;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** PRIVATE SET MANAGEMENT METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+//  Przetworzenie polecenia ustawienia alarmu.
+int CommandProcessor::ProcessAlarmSetCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("alarm set");
+        return COMMAND_NONE;
+    }
+
+    if (this->params_data == "off" || this->params_data == "disable")
+    {
+        this->controller->DisableAlarm();
+        this->NotifyConfigurationUpdated();
+        return COMMAND_DISPLAY_DATETIME;
+    }
+
+    int *data_array = new int[2] {0, 0};
+    int last_step = this->ParseMultiNumberData(data_array, 23);
+
+    if (last_step >= 2)
+    {
+        int hour = max(0, min(23, data_array[0]));
+        int min = max(0, min(59, data_array[1]));
+        
+        this->controller->SetAlarm(hour, min);
+        this->NotifyConfigurationUpdated();
+        return COMMAND_DISPLAY_DATETIME;
+    }
+
+    this->RaiseInvalidParameterError("alarm set");
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia ustawienia brzeczyka godzinowego.
+int CommandProcessor::ProcessBeepSetCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("beep set");
+        return COMMAND_NONE;
+    }
+
+    if (this->params_data == "off" || this->params_data == "disable")
+    {
+        this->controller->SetBuzzerHourNotifierInterval(0);
+        this->NotifyConfigurationUpdated();
+        return COMMAND_PROCESSED_OK;
+    }
+    else
+    {
+        int value = -1;
+        int last_step = this->ParseNumberData(value);
+
+        if (last_step > 0)
+        {
+            if (value == 0)
+            {            
+                this->controller->SetBuzzerHourNotifierInterval(0);
+                this->NotifyConfigurationUpdated();
+                return COMMAND_PROCESSED_OK;
+            }
+
+            else if (value == 1 || value == 3 || value == 6 || value == 12 || value == 24)
+            {
+                this->controller->SetBuzzerHourNotifierInterval(value);
+                this->NotifyConfigurationUpdated();
+                return COMMAND_PROCESSED_OK;
+            }
+        }
+    }
+
+    this->RaiseInvalidParameterError("beep set");
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia ustawienia jasnosci ekranu.
 int CommandProcessor::ProcessBrightnessSetCommand()
 {
@@ -161,6 +362,7 @@ int CommandProcessor::ProcessBrightnessSetCommand()
     if (this->params_data == "a" || this->params_data == "auto")
     {
         this->controller->SetAutoBrightness(true);
+        this->NotifyConfigurationUpdated();
         return COMMAND_PROCESSED_OK;
     }
     else if (this->IsCharacterADigit(this->params_data[0]))
@@ -168,6 +370,7 @@ int CommandProcessor::ProcessBrightnessSetCommand()
         int brightness = max(DISPLAY_MIN_BRIGHTNESS, min(this->params_data[0] - 48, DISPLAY_MAX_BRIGHTNESS));
         this->controller->SetAutoBrightness(false);
         this->controller->display_ctrl->SetBrightness(brightness);
+        this->NotifyConfigurationUpdated();
         return COMMAND_PROCESSED_OK;
     }
     
@@ -195,7 +398,8 @@ int CommandProcessor::ProcessDateSetCommand()
         int month = max(1, min(12, data_array[2]));
         int year = max(2000, min(2035, data_array[3]));
 
-        this->controller->clock_ctrl->SetDate(day, week, month, year);
+        this->controller->SetDate(day, week, month, year);
+        this->NotifyConfigurationUpdated();
         return COMMAND_DISPLAY_DATETIME;
     }
     else if (last_step == 3)
@@ -204,7 +408,8 @@ int CommandProcessor::ProcessDateSetCommand()
         int month = max(1, min(12, data_array[1]));
         int year = max(2000, min(2035, data_array[2]));
 
-        this->controller->clock_ctrl->SetDate(day, month, year);
+        this->controller->SetDate(day, month, year);
+        this->NotifyConfigurationUpdated();
         return COMMAND_DISPLAY_DATETIME;
     }
     
@@ -233,13 +438,14 @@ int CommandProcessor::ProcessTimeSetCommand()
         if (last_step >= 3)
         {
             int sec = max(0, min(59, data_array[1]));
-            this->controller->clock_ctrl->SetTime(hour, min, sec);            
+            this->controller->SetTime(hour, min, sec);
         }
         else
         {
-            this->controller->clock_ctrl->SetTime(hour, min);
+            this->controller->SetTime(hour, min);
         }
 
+        this->NotifyConfigurationUpdated();
         return COMMAND_DISPLAY_DATETIME;
     }
 
@@ -273,11 +479,35 @@ int CommandProcessor::ProcessCommand(String raw_data)
     this->params_data = "";
     this->raw_data = raw_data;
 
-    if (this->ValidateCommand("/brightness set"))
+    if (this->ValidateCommand("/alarm get"))
+        return this->ProcessAlarmGetCommand();
+        
+    else if (this->ValidateCommand("/alarm set"))
+        return this->ProcessAlarmSetCommand();
+    
+    else if (this->ValidateCommand("/beep get"))
+        return this->ProcessBeepGetCommand();
+        
+    else if (this->ValidateCommand("/beep set"))
+        return this->ProcessBeepSetCommand();
+    
+    else if (this->ValidateCommand("/brightness get"))
+        return this->ProcessBrightnessGetCommand();
+    
+    else if (this->ValidateCommand("/brightness set"))
         return this->ProcessBrightnessSetCommand();
+
+    else if (this->ValidateCommand("/date get"))
+        return this->ProcessDateGetCommand();
         
     else if (this->ValidateCommand("/date set"))
         return this->ProcessDateSetCommand();
+    
+    else if (this->ValidateCommand("/init"))
+        return this->ProcessIsInitializedCommand();
+    
+    else if (this->ValidateCommand("/time get"))
+        return this->ProcessTimeGetCommand();
 
     else if (this->ValidateCommand("/time set"))
         return this->ProcessTimeSetCommand();

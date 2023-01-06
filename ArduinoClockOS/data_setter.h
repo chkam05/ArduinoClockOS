@@ -97,6 +97,9 @@ class DataSetter
 //  *** PRIVATE METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+/*  Konwersja wartosci brzeczyka godzinowego na indeks opcji w konfiguracji.
+ *  @return: Indeks opcji w konfiguracji.
+ */
 int DataSetter::GetBeepValuePosition()
 {
     switch (this->controller->GetBuzzerHourNotifierInterval())
@@ -119,12 +122,18 @@ int DataSetter::GetBeepValuePosition()
 }
 
 //  ----------------------------------------------------------------------------
+/*  Konwersja wartosci jasnosci na indeks opcji w konfiguracji.
+ *  @return: Indeks opcji w konfiguracji.
+ */
 int DataSetter::GetBrightnessValuePosition()
 {
     return controller->IsAutoBrightness() ? SETTER_BRIGHNESS_AUTO : controller->display_ctrl->GetBrightness() + 1;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Przejscie do nastepnego podmenu ustawien lub wybranie opcji w konfiguracji.
+ *  @return: Indeks wybranego podmenu, opcji, badz 0 powrot.
+ */
 int DataSetter::NavigateForward()
 {
     int value = this->data[this->setter_position];
@@ -139,7 +148,7 @@ int DataSetter::NavigateForward()
                 int mon = this->data[2];
                 int year = ("20" + (this->data[3] < 10 ? "0" + String(this->data[3]) : String(this->data[3]))).toInt();
                 int week = this->data[4];
-                controller->clock_ctrl->SetDate(day, week, mon, year);
+                controller->SetDate(day, week, mon, year);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -153,7 +162,7 @@ int DataSetter::NavigateForward()
                 int hour = this->data[1];
                 int mins = this->data[2];
                 int secs = this->data[3];
-                controller->clock_ctrl->SetTime(hour, mins, secs);
+                controller->SetTime(hour, mins, secs);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -164,8 +173,7 @@ int DataSetter::NavigateForward()
         case BRIGHTNESS_SETTER:
             if (value >= 0 && value <= 8)
             {
-                controller->SetAutoBrightness(false);
-                controller->display_ctrl->SetBrightness(value);
+                controller->SetBrightness(value);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_BRIGHNESS_AUTO)
@@ -192,14 +200,14 @@ int DataSetter::NavigateForward()
         case ALARM_SETTER:
             if (value == SETTER_OFF)
             {
-                this->controller->alarm->DisableAlarm();
+                this->controller->DisableAlarm();
                 return SETTER_EXIT;
             }
             if (value == SETTER_SAVE)
             {
                 int hour_alarm = this->data[1];
                 int mins_alarm = this->data[2];
-                this->controller->alarm->SetAlarm(hour_alarm, mins_alarm);
+                this->controller->SetAlarm(hour_alarm, mins_alarm);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -212,12 +220,16 @@ int DataSetter::NavigateForward()
 }
 
 //  ----------------------------------------------------------------------------
+/*  Powrot do poprzedniego menu.
+ *  @return: Indeks wybranego menu, opcji, badz exit.
+ */
 int DataSetter::NavigateBack()
 {
     return SETTER_EXIT;
 }
 
 //  ----------------------------------------------------------------------------
+//  Przejscie do poprzedniego elementu na liscie opcji konfiguracji.
 int DataSetter::NavigatePrevious()
 {
     if (this->IsManualInputAllowed() && this->input_index > 0)
@@ -236,6 +248,7 @@ int DataSetter::NavigatePrevious()
 }
 
 //  ----------------------------------------------------------------------------
+//  Przejscie do nastepnego elementu na liscie opcji konfiguracji.
 int DataSetter::NavigateNext()
 {
     if (this->IsManualInputAllowed() && this->input_index > 0)
@@ -254,6 +267,9 @@ int DataSetter::NavigateNext()
 }
 
 //  ----------------------------------------------------------------------------
+/*  Sprawdzenie czy dozwolone jest wpisywanie wartosci z klawiatury numerycznej.
+ *  @return: True - dozwolone wpisanie wartosci z klawiatury numerycznej; False - w innym wypadku.
+ */
 bool DataSetter::IsManualInputAllowed()
 {
     switch (this->mode)
@@ -272,6 +288,10 @@ bool DataSetter::IsManualInputAllowed()
 }
 
 //  ----------------------------------------------------------------------------
+/*  Przetworzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury numerycznej.
+ *  @param input: Dane wejsciowe z klawiatury numerycznej (wcisniety klawisz 0..9).
+ *  @return: Indeks wykonanego procesu przez konfiguratora.
+ */
 int DataSetter::NavigateManualInput(char input_key)
 {
     if (this->IsManualInputAllowed() && this->input_index < SETTER_INPUT_MAX)
@@ -298,6 +318,7 @@ int DataSetter::NavigateManualInput(char input_key)
 }
 
 //  ----------------------------------------------------------------------------
+//  Przetworzenie i zatwierdzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury numerycznej.
 void DataSetter::SetManualInputValue()
 {
     if (this->current_input == "" && this->current_input.length() <= 0)
@@ -355,6 +376,7 @@ void DataSetter::SetManualInputValue()
 }
 
 //  ----------------------------------------------------------------------------
+//  Reset danych tymczasowych uzywanych podczas wprowadzania danych z klawiatury numerycznej.
 void DataSetter::ResetManualInput()
 {
     this->input_index = 0;
@@ -362,6 +384,11 @@ void DataSetter::ResetManualInput()
 }
 
 //  ----------------------------------------------------------------------------
+/*  Wygenerowanie pola edycji tekstu wraz z wpisanym tekstem i wolnymi polami.
+ *  @param pos: Pozycja kursora.
+ *  @param spaces: Puste miejsca.
+ *  @return: Pole edycji tekstu wraz z wpisanym tekstem i wolnymi polami.
+ */
 String DataSetter::GetEditableString(int pos, int spaces)
 {
     String display_string = "";
@@ -396,6 +423,9 @@ String DataSetter::GetEditableString(int pos, int spaces)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Wyswietlenie tylko czesci danych / wybranej opcji konfiguratora na ekranie.
+ *  @param dsp_ctrl: Kontroler wyswietlacza.
+ */
 void DataSetter::DisplayData(DisplayController * dsp_ctrl)
 {
     int pos = this->setter_position;
@@ -476,6 +506,9 @@ void DataSetter::DisplayData(DisplayController * dsp_ctrl)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Wyswietlenie tylko czesci tytulu konfiguratora na ekranie.
+ *  @param dsp_ctrl: Kontroler wyswietlacza.
+ */
 void DataSetter::DisplayTitle(DisplayController * dsp_ctrl)
 {
     int _text_offset = 10;
@@ -510,6 +543,10 @@ void DataSetter::DisplayTitle(DisplayController * dsp_ctrl)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Wyswietlenie konfiguratora na ekranie badz jego wyczyszczenie.
+ *  @param clear: True - wyczyszczenie ekranu; False - w innym wypadku.
+ *  @param only_data_update: True - aktualizacja tylko wybranej opcji na ekranie; False - w innym wypadku.
+ */
 void DataSetter::DisplaySetter(bool clear = false, bool only_data_update = false)
 {
     DisplayController * dsp_ctrl = this->controller->display_ctrl;
@@ -540,12 +577,18 @@ DataSetter::DataSetter(GlobalController * controller)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Pobranie indeksu aktualnie modyfikowanego ustawienia.
+ *  @return: Indeks aktualnie modyfikowanego ustawienia.
+ */
 int DataSetter::GetMode()
 {
     return this->mode;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Otwarcie konfiguratora i ustawienie indeksu ustawienia do modyfikacji.
+ *  @param mode: Indeks ustawienia do modyfikacji.
+ */
 void DataSetter::OpenSetter(int mode)
 {
     this->mode = mode % SETTERS;
@@ -621,6 +664,10 @@ void DataSetter::OpenSetter(int mode)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Przetworzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury.
+ *  @param input: Dane wejsciowe z klawiatury (wcisniety klawisz).
+ *  @return: Indeks wykonanego procesu przez konfiguratora.
+ */
 int DataSetter::ProcessInput(int input)
 {
     if (this->allow_keyboard_input && input >= KEYPAD_0_KEY && input <= KEYPAD_9_KEY)
@@ -635,6 +682,7 @@ int DataSetter::ProcessInput(int input)
             return this->NavigateBack();
         
         case KEYPAD_MENU_KEY:
+            this->controller->display_ctrl->Clear();
             return SETTER_FULL_EXIT;
         
         case KEYPAD_NEXT_KEY:
@@ -648,6 +696,7 @@ int DataSetter::ProcessInput(int input)
 }
 
 //  ----------------------------------------------------------------------------
+//  Odswiezenie ekranu i ponowne wyswietlenie konfiguratora.
 void DataSetter::UpdateDisplay()
 {
     if (this->IsManualInputAllowed() && this->edit_started)

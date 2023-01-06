@@ -44,6 +44,8 @@
 #define GLOBAL_STATE_SETTER             2
 #define GLOBAL_STATE_ALARM              3
 
+const String CONFIG_FILE_NAME = "conf.ini";
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  *** CLASS DEFINITION ***
@@ -60,6 +62,7 @@ class GlobalController
         int   display_state                 =   DISPLAY_DATETIME_STATE;
         bool  force_display_refresh         =   false;
         int   global_state                  =   GLOBAL_STATE_NORMAL;
+        bool  initialized                   =   false;
 
         String  input_command_value         =   "";
         char    input_key                   =   0;
@@ -98,13 +101,18 @@ class GlobalController
 
         GlobalController();
 
-        //  Brightness management.
-        bool  IsAutoBrightness();
-        void  SetAutoBrightness(bool enabled);
+        //  Alarm Management.
+        void  DisableAlarm(bool save_to_file = true);
+        void  SetAlarm(int hour, int minute, bool enabled = true, bool save_to_file = true);
 
-        //  Buzzer.
+        //  Brightness Management.
+        bool  IsAutoBrightness();
+        void  SetAutoBrightness(bool enabled, bool save_to_file = true);
+        void  SetBrightness(int brightness, bool save_to_file = true);
+
+        //  Buzzer Management.
         int   GetBuzzerHourNotifierInterval();
-        void  SetBuzzerHourNotifierInterval(int interval = 0);
+        void  SetBuzzerHourNotifierInterval(int interval = 0, bool save_to_file = true);
 
         //  Data Management.
         void  ProcessAlarm();
@@ -112,6 +120,12 @@ class GlobalController
         void  ProcessBeepHour();
         void  ProcessSecondLedBlinking();
         void  ProcessFunctionalities();
+
+        //  Date & Time Management.
+        void  SetDate(int day, int day_week, int month, int year);
+        void  SetDate(int day, int month, int year);
+        void  SetTime(int hour, int min, int sec);
+        void  SetTime(int hour, int min);
 
         //  Display Management.
         void            ForceDisplayRefresh();
@@ -127,9 +141,14 @@ class GlobalController
         void    ProcessInput();
 
         //  Machine States Management.
+        bool  IsInitialized();
         int   GetMachineState();
         void  SetMachineState(int machine_state);
         void  FinalizeCycle();
+
+        //  Save & Load.
+        void  LoadData();
+        void  SaveData();
 };
 
 
@@ -137,6 +156,7 @@ class GlobalController
 //  *** DISPLAY MANAGEMENT PRIVATE METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Wyswietlanie ikonki alarmu kiedy jest ustawiony.
 void GlobalController::DisplayAlarmIsSet()
 {
     DisplayString * dsp_str   = this->display_strings[TEXT_ALIGN_RIGHT];
@@ -172,7 +192,7 @@ void GlobalController::DisplayDate()
 {
     DisplayString * dsp_str = this->display_strings[TEXT_ALIGN_LEFT];
 
-    dsp_str->text   = this->clock_ctrl->GetDate("YMD", '.');
+    dsp_str->text   = this->clock_ctrl->GetDate("DMy", '-');
     dsp_str->offset = 1;
     dsp_str->_xpos  = 0;
 
@@ -362,6 +382,9 @@ void GlobalController::Initialize()
 
     //  Inicjalizacja, konfiguracja i test modulu kontrolera wyswietlacza.
     this->InitializeDisplay();
+
+    //  Zaladowanie danych z pliku.
+    this->LoadData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -373,6 +396,34 @@ GlobalController::GlobalController()
 {
     this->alarm = new Alarm();
     this->Initialize();
+
+    this->initialized = true;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** ALARM PUBLIC METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+//  Rozbrojenie alarmu.
+void GlobalController::DisableAlarm(bool save_to_file = true)
+{
+    this->alarm->DisableAlarm();
+
+    if (save_to_file)
+        this->SaveData();
+}
+
+//  ----------------------------------------------------------------------------
+/*  Ustawienie godziny uruchomienia alarmu.
+ *  @param hour: Godzina uruchomienia alarmu.
+ *  @param minute: Minuta uruchomienia alarmu.
+ */
+void GlobalController::SetAlarm(int hour, int minute, bool enabled = true, bool save_to_file = true)
+{
+    this->alarm->SetAlarm(hour, minute, enabled);
+
+    if (save_to_file)
+        this->SaveData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -388,25 +439,28 @@ bool GlobalController::IsAutoBrightness()
 }
 
 //  ----------------------------------------------------------------------------
-//  Ustawienie jasnosci poprzez opcje jasnosci automatycznej.
-void GlobalController::ProcessAutoBrightness(bool override = false)
-{
-    if (this->brightness_auto || override)
-    {
-        int brightness  = (this->photoresistor_ctrl_left->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)
-            + this->photoresistor_ctrl_right->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)) / 2;
-        
-        this->display_ctrl->SetBrightness(brightness);
-    }
-}
-
-//  ----------------------------------------------------------------------------
 /*  Wlaczenie / wylaczenie automatycznej zmiany jasnosci ekranu.
  * @param enabled: True - wlaczenie automatycznej zmiany jasnosci ekranu; False - wylaczenie.
  */
-void GlobalController::SetAutoBrightness(bool enabled)
+void GlobalController::SetAutoBrightness(bool enabled, bool save_to_file = true)
 {
     this->brightness_auto = enabled;
+
+    if (save_to_file)
+        this->SaveData();
+}
+
+//  ----------------------------------------------------------------------------
+/* Ustawienie nowej wartosci jasnosci wyswietlacza.
+ * @param brightness: Nowa wartosc jasnosci wyswietlacza miedzy.
+ */
+void GlobalController::SetBrightness(int brightness, bool save_to_file = true)
+{
+    this->brightness_auto = false;
+    this->display_ctrl->SetBrightness(brightness);
+
+    if (save_to_file)
+        this->SaveData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -423,12 +477,15 @@ int GlobalController::GetBuzzerHourNotifierInterval()
 
 //  ----------------------------------------------------------------------------
 //  Ustawienie interwalu powiadamiania o zmianie godziny brzeczykiem.
-void GlobalController::SetBuzzerHourNotifierInterval(int interval = 0)
+void GlobalController::SetBuzzerHourNotifierInterval(int interval = 0, bool save_to_file = true)
 {
     if (interval >= 0 && interval <= 24 && (interval == 1 || interval % 3 == 0))
         this->buzzer_hour_change_interval = interval;
     else
         this->buzzer_hour_change_interval = 0;
+    
+    if (save_to_file)
+        this->SaveData();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -444,6 +501,19 @@ void GlobalController::ProcessAlarm()
         
         if (this->alarm->CheckTrigger(datetime_now))
             this->SetMachineState(GLOBAL_STATE_ALARM);
+    }
+}
+
+//  ----------------------------------------------------------------------------
+//  Ustawienie jasnosci poprzez opcje jasnosci automatycznej.
+void GlobalController::ProcessAutoBrightness(bool override = false)
+{
+    if (this->brightness_auto || override)
+    {
+        int brightness  = (this->photoresistor_ctrl_left->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)
+            + this->photoresistor_ctrl_right->GetMappedBrightness(DISPLAY_MAX_BRIGHTNESS)) / 2;
+        
+        this->display_ctrl->SetBrightness(brightness);
     }
 }
 
@@ -483,6 +553,53 @@ void GlobalController::ProcessFunctionalities()
     this->ProcessAutoBrightness();
     this->ProcessBeepHour();
     this->ProcessAlarm();
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** DATE AND TIME MANAGEMENT PUBLIC METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+/*  Ustawienie nowej daty.
+ *  @param day: Dzien w miesiacu od 1 do 31.
+ *  @param day_week: Dzien tygodnia od 1 do 7.
+ *  @param month: Miesiac od 1 do 12.
+ *  @param year: Rok.
+ */
+void GlobalController::SetDate(int day, int day_week, int month, int year)
+{
+    this->clock_ctrl->SetDate(day, day_week, month, year);
+}
+
+//  ----------------------------------------------------------------------------
+/*  Ustawienie nowej daty.
+ *  @param day: Dzien w miesiacu od 1 do 31.
+ *  @param month: Miesiac od 1 do 12.
+ *  @param year: Rok.
+ */
+void GlobalController::SetDate(int day, int month, int year)
+{
+    this->clock_ctrl->SetDate(day, month, year);
+}
+
+//  ----------------------------------------------------------------------------
+/*  Ustawienie nowego czasu.
+ *  @param hour: Godzina od 0 do 23.
+ *  @param min: Minuta od 0 do 59.
+ *  @param sec: Sekunda od 0 do 59.
+ */
+void GlobalController::SetTime(int hour, int min, int sec)
+{
+    this->clock_ctrl->SetTime(hour, min, sec);
+}
+
+//  ----------------------------------------------------------------------------
+/*  Ustawienie nowego czasu.
+ *  @param hour: Godzina od 0 do 23.
+ *  @param min: Minuta od 0 do 59.
+ */
+void GlobalController::SetTime(int hour, int min)
+{
+    this->clock_ctrl->SetTime(hour, min);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -623,6 +740,15 @@ void GlobalController::ProcessInput()
 //  *** MACHINE STATES MANAGEMENT PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+/*  Pobranie informacji o poprawnej inicjalizacji urzadzenia.
+ *  @result: Informacja o poprawnej inicjalizacji urzadzenia.
+ */
+bool GlobalController::IsInitialized()
+{
+    return this->initialized;
+}
+
+//  ----------------------------------------------------------------------------
 /*  Pobranie indeksu aktualnego trybu pracy uzadzenia.
  *  @result: Indeks aktualnego trybu pracy uzadzenia.
  */
@@ -649,6 +775,122 @@ void GlobalController::FinalizeCycle()
     this->force_display_refresh = false;
     this->input_command_value = "";
     this->input_key = 0;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+//  *** MACHINE STATES MANAGEMENT PUBLIC METHOD BODIES ***
+////////////////////////////////////////////////////////////////////////////////
+
+//  Zaladowanie konfiguracji z pliku.
+void GlobalController::LoadData()
+{
+    char character = ' ';
+    String line = "";
+
+    if (this->sdcard_ctrl->IsInitialized() && this->sdcard_ctrl->IsMounted())
+    {
+        if (!this->sdcard_ctrl->FileExists(CONFIG_FILE_NAME))
+            return;
+        
+        File file = this->sdcard_ctrl->OpenFileToRead(CONFIG_FILE_NAME);
+
+        this->serial_ctrl->WriteRawData("", SERIAL_COM);
+        this->serial_ctrl->WriteRawData("Loading data from file...", SERIAL_COM);
+        this->serial_ctrl->WriteRawData("", SERIAL_COM);
+
+        while (file.available()) {
+            while (file.available() && character != '\n')
+            {
+                character = file.read();
+
+                if (character == '\t' || character == '\r')
+                    continue;
+
+                if (character != '\n')
+                    line += character;
+                else
+                    break;
+            }
+            
+            line.toLowerCase();
+            Serial.println(line);
+
+            //  Load alarm configuration.
+            if (line.startsWith("alarm="))
+            {
+                line = line.substring(6);
+
+                if (line.length() > 0)
+                {
+                    int colon_index = line.indexOf(':');
+                    int space_index = line.indexOf(' ');
+
+                    int alarm_hour = line.substring(0, colon_index).toInt();
+                    int alarm_min = line.substring(colon_index+1, space_index).toInt();
+                    bool alarm_is_enabled = (line.substring(space_index+1, space_index+3) == "on");
+
+                    this->SetAlarm(alarm_hour, alarm_min, alarm_is_enabled, false);
+                }
+            }
+
+            //  Load beep hours configuration.
+            else if (line.startsWith("beep_hours="))
+            {
+                line = line.substring(11);
+
+                if (line.length() > 0)
+                    this->SetBuzzerHourNotifierInterval(line.toInt(), false);
+            }
+
+            //  Load brightness configuration.
+            else if (line.startsWith("brightness="))
+            {
+                line = line.substring(11);
+
+                if (line.length() > 1 && line.substring(0, 4) == String("auto"))
+                    this->SetAutoBrightness(true, false);
+
+                else if (line.length() > 0)
+                    this->SetBrightness(max(0, min(8, line.toInt())), false);
+            }
+
+            character = ' ';
+            line = "";
+        }
+
+        file.close();
+
+        this->serial_ctrl->WriteRawData("", SERIAL_COM);
+        this->serial_ctrl->WriteRawData("Configuration loaded!", SERIAL_COM);
+        this->serial_ctrl->WriteRawData("", SERIAL_COM);
+    }
+}
+
+//  ----------------------------------------------------------------------------
+//  Zapis konfiguracji do pliku.
+void GlobalController::SaveData()
+{
+    if (this->sdcard_ctrl->IsInitialized() && this->sdcard_ctrl->IsMounted())
+    {
+        File file = this->sdcard_ctrl->OpenFileToWrite(CONFIG_FILE_NAME);
+
+        String alarm_data = String(this->alarm->hour) + ":" + String(this->alarm->minute) + " " + (this->alarm->IsEnabled() ? "on" : "off");
+        String beep_data = String(this->buzzer_hour_change_interval);
+        String brightness_data = this->brightness_auto ? "auto" : String(this->display_ctrl->GetBrightness());
+
+        file.println("[configuration]");
+
+        this->serial_ctrl->WriteRawData("Saving alarm: " + alarm_data, SERIAL_COM);
+        file.println("alarm=" + alarm_data);
+
+        this->serial_ctrl->WriteRawData("Saving beep hours: " + beep_data, SERIAL_COM);
+        file.println("beep_hours=" + beep_data);
+
+        this->serial_ctrl->WriteRawData("Saving brightness: " + brightness_data, SERIAL_COM);
+        file.println("brightness=" + brightness_data);
+
+        file.close();
+    }
 }
 
 #endif
