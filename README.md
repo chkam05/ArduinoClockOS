@@ -43,7 +43,28 @@ Software for handling Arduino multi-device clock device.
 - SD Card module HW-125
 - Temperature sensor DALLAS DS18B20
 
+## Examples:
+
+Overview photo showing from above:
+- Default display mode (changes every 15 sec): Date & Time
+- Default display mode (changes every 15 sec): In door temperature.
+- Default display mode (changes every 15 sec): Outside temperature.
+- Main menu, showing Settings menu elemnt to choose.
+- Alarm settings, showing hour and minutes setting (highlihted minutes).
+- Alarm settings, showing option to set alarm (entered hour and minutes and enables alarm).
+- Alarm settings, showing option to disable alarm.
+
 ![Arduino Example (Images/arduino_example.png)](Images/arduino_example.png)
+
+## Controls:
+
+Navigation is done by:
+D - Enter settings mode, and back to default display mode from any place.
+A - Enter or set.
+B - Back.
+* - Navigate left in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)
+# - Navigate right in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)
+(Numeric data can be set by pressing numeric keys 0..9)
 
 # ArduinoConnect (WPF application)
 
