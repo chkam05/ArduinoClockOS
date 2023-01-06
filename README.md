@@ -43,6 +43,8 @@ Software for handling Arduino multi-device clock device.
 - SD Card module HW-125
 - Temperature sensor DALLAS DS18B20
 
+![Arduino Example (Images/arduino_example.png)](Images/arduino_example.png)
+
 # ArduinoConnect (WPF application)
 
 Application that allow to control Arduino from PC using serial communication.
