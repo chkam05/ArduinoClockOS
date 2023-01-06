@@ -58,13 +58,13 @@ Overview photo showing from above:
 
 ## Controls:
 
-Navigation is done by:
-D - Enter settings mode, and back to default display mode from any place.
-A - Enter or set.
-B - Back.
-* - Navigate left in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)
-# - Navigate right in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)
-(Numeric data can be set by pressing numeric keys 0..9)
+Navigation is done by:  
+"D" - Enter settings mode, and back to default display mode from any place.  
+"A" - Enter or set.  
+"B" - Back.  
+"*" - Navigate left in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)  
+"#" - Navigate right in menu (change item, change option in settings or set other item to edit such as hour, minutes, etc...)  
+(Numeric data can be set by pressing numeric keys 0..9)  
 
 # ArduinoConnect (WPF application)
 
