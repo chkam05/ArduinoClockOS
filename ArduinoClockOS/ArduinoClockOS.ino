@@ -226,6 +226,17 @@ void ProcessAlarmState(int input)
 }
 
 //  ----------------------------------------------------------------------------
+void ProcessMessageState(int input)
+{
+    if (input == MESSAGE_FINISHED)
+    {
+        controller->SetMachineState(GLOBAL_STATE_NORMAL);
+        controller->display_ctrl->Clear();
+        controller->SetDisplayingState(DISPLAY_DATETIME_STATE);
+    }
+}
+
+//  ----------------------------------------------------------------------------
 void ProcessFunctionalities()
 {
     //  Przetworzenie globalnych funkcjonlanosci.
@@ -259,6 +270,13 @@ void ProcessFunctionalities()
             int alarm_output = controller->alarm->ProcessInput(input_key);
             ProcessAlarmState(alarm_output);
         }
+    }
+
+    //  Tryby pozwalajace na 0 input.
+    if (machine_state == GLOBAL_STATE_MESSAGE)
+    {
+        int message_output = controller->msg_ctrl->ProcessInput(input_key);
+        ProcessMessageState(message_output);
     }
 }
 
@@ -297,16 +315,19 @@ void ProcessAlarmDisplay()
 //  ----------------------------------------------------------------------------
 void ProcessDisplay()
 {
-    int machine_sate = controller->GetMachineState();
+    int machine_state = controller->GetMachineState();
 
-    if (machine_sate == GLOBAL_STATE_NORMAL)
+    if (machine_state == GLOBAL_STATE_NORMAL)
         controller->ProcessDisplay();
 
-    else if (machine_sate == GLOBAL_STATE_SETTER)
+    else if (machine_state == GLOBAL_STATE_SETTER)
         data_setter->UpdateDisplay();
     
-    else if (machine_sate == GLOBAL_STATE_ALARM)
+    else if (machine_state == GLOBAL_STATE_ALARM)
         ProcessAlarmDisplay();
+    
+    else if (machine_state == GLOBAL_STATE_MESSAGE)
+        controller->msg_ctrl->UpdateDisplay();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

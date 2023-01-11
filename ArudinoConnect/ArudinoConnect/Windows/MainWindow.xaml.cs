@@ -567,7 +567,7 @@ namespace ArudinoConnect.Windows
                 },
                 new ConfigCommandCarrier()
                 {
-                    Command = "/beep get",
+                    Command = "/brightness get",
                     CompleteMessage = "",
                     FailMessage = "Downloading brightness configuration failed.",
                 }

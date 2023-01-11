@@ -14,6 +14,7 @@
 #include "clock_timer.h"
 #include "display_controller.h"
 #include "keypad_controller.h"
+#include "message_controller.h"
 #include "photoresistor_controller.h"
 #include "sd_card_controller.h"
 #include "serial_controller.h"
@@ -38,11 +39,12 @@
 #define DISPLAY_TEMPERATURE_IN_STATE    1
 #define DISPLAY_TEMPERATURE_OUT_STATE   2
 
-#define GLOBAL_STATES                   4
+#define GLOBAL_STATES                   5
 #define GLOBAL_STATE_NORMAL             0
 #define GLOBAL_STATE_MENU               1
 #define GLOBAL_STATE_SETTER             2
 #define GLOBAL_STATE_ALARM              3
+#define GLOBAL_STATE_MESSAGE            4
 
 const String CONFIG_FILE_NAME = "conf.ini";
 
@@ -92,6 +94,7 @@ class GlobalController
         BuzzerController              * buzzer_ctrl;
         ClockController               * clock_ctrl;
         DisplayController             * display_ctrl;
+        MessageController             * msg_ctrl;
         SdCardController              * sdcard_ctrl;
         PhotoresistorController       * photoresistor_ctrl_left;
         PhotoresistorController       * photoresistor_ctrl_right;
@@ -276,6 +279,9 @@ void GlobalController::InitializeDisplay()
     this->display_strings[TEXT_ALIGN_LEFT]->_xpos = 0;
     this->display_strings[TEXT_ALIGN_CENTER]->_xpos = this->display_ctrl->GetWidth()/2;
     this->display_strings[TEXT_ALIGN_RIGHT]->_xpos = this->display_ctrl->GetWidth()-1;
+
+    //  Inicjalizacja kontenera wiadomosci.
+    this->msg_ctrl = new MessageController(this->display_ctrl);
 
     //  Wyswietlenie logo.
     DisplayString * _display_string_center = this->display_strings[TEXT_ALIGN_CENTER];

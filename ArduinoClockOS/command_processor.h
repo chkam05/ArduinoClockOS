@@ -48,6 +48,7 @@ class CommandProcessor
         int   ProcessBeepSetCommand();
         int   ProcessBrightnessSetCommand();
         int   ProcessDateSetCommand();
+        int   ProcessMessageCommand();
         int   ProcessTimeSetCommand();
     
     public:
@@ -418,6 +419,24 @@ int CommandProcessor::ProcessDateSetCommand()
 }
 
 //  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia wiadomosci.
+int CommandProcessor::ProcessMessageCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("date set");
+        return COMMAND_NONE;
+    }
+
+    int setup_result = this->controller->msg_ctrl->SetupMessage(this->params_data);
+
+    if (setup_result == MESSAGE_DISPLAYING)
+        this->controller->SetMachineState(GLOBAL_STATE_MESSAGE);
+
+    return COMMAND_PROCESSED_OK;
+}
+
+//  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia ustawienia czasu.
 int CommandProcessor::ProcessTimeSetCommand()
 {
@@ -505,6 +524,9 @@ int CommandProcessor::ProcessCommand(String raw_data)
     
     else if (this->ValidateCommand("/init"))
         return this->ProcessIsInitializedCommand();
+    
+    else if (this->ValidateCommand("/msg"))
+        return this->ProcessMessageCommand();
     
     else if (this->ValidateCommand("/time get"))
         return this->ProcessTimeGetCommand();

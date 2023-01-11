@@ -40,16 +40,19 @@ Weather::Weather()
     //
 }
 
+//  ----------------------------------------------------------------------------
 int Weather::GetWeather(Time date_time)
 {
     return 0;
 }
 
+//  ----------------------------------------------------------------------------
 void Weather::SetWeather(String data, File * file, bool append = true)
 {
     //
 }
 
+//  ----------------------------------------------------------------------------
 void Weather::UpdateWeather(Time date_time, File * file)
 {
     //

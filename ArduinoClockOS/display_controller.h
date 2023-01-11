@@ -127,7 +127,9 @@ class DisplayController
         void    DrawPoint(int x, int y, int value);
         int     DrawSprite(const byte *sprite, int x, int sprite_index);
         int     PrintChar(int font, int x, char character);
+        int     PrintCharWithShift(int font, int x, char character, int shift = 0);
         int     PrintText(int font, int x, String text, int step_delay);
+        int     PrintMessage(int font, int x, int last_x, String & message, int & shift, int step_delay = 0);
 
         int     GetTextWidth(int font, String text);
         String  ClampText(int font, String text, int *width, int first_char, int left_offset, int right_offset);
@@ -494,6 +496,66 @@ int DisplayController::PrintChar(int font, int x, char character)
 }
 
 //  ----------------------------------------------------------------------------
+int DisplayController::PrintCharWithShift(int font, int x, char character, int shift = 0)
+{
+    //  Zaladowanie znaku do pamieci podrecznej.
+    this->LoadCharacter(font, character);
+
+    //  Wyswietlenie znaku na ekranie jezeli zostal zainicjalizowany.
+    if (this->initialized)
+    {
+        //  Wstepna konfiguracja zmiennych roboczych.
+        int char_width = this->buffer[0];
+        int xpos = x;
+        int result_width = (char_width - shift);
+
+        //  Sprawdzenie czy przesuniecie przekroczylo rozmiar znaku.
+        if (result_width <= 0)
+            return 0;
+        
+        //  Przesuniecie znaku.
+        if (shift > 0)
+        {
+            int reset_point = 0;
+
+            for (int cpos = 2 + shift; cpos < 10; cpos++)
+            {
+                this->buffer[cpos-shift] = this->buffer[cpos];
+                reset_point = cpos-shift + 1;
+            }
+
+            for (int cpos = reset_point; cpos < 10; cpos++)
+                this->buffer[cpos] = 0;
+        }
+
+        while (result_width > 0)
+        {
+            //  Oblicznie dlugosci znaku w okreslonym segmentcie ekranu.
+            int comp = DISPLAY_SEGMENT_WIDTH - (xpos % DISPLAY_SEGMENT_WIDTH);
+            int rest = result_width - comp;
+            int prnt = min(result_width, comp - abs(min(rest, 0)));
+
+            //  Wyswietlenie fragmentu znaku na segmencie ekranu.
+            this->buffer[0] = prnt;
+            this->base->writeSprite(xpos, 0, this->buffer);
+
+            //  Oblicznie pozycji nastepnego fragmentu znaku.
+            xpos = xpos + comp;
+
+            //  Skopiowanie następnego fragmentu znaku do pamieci podrecznej.
+            if (rest > 0)
+                for (int cpos = 2 + comp; cpos < 10; cpos++)
+                    this->buffer[cpos-comp] = this->buffer[cpos];
+
+            //  Pobranie dostepnej dlugosci kolejnego fragmentu ekranu.
+            result_width = max(0, rest);
+        }
+
+        return char_width - shift;
+    }
+}
+
+//  ----------------------------------------------------------------------------
 /* Wyswietlenie tekstu na ekranie.
  * @param font: Indeks tablicay zawierajacej czcionke w jakiej tekst ma zostac wyswietlony na ekranie.
  * @param x: Indeks kolumny ekranu od ktorej text ma zostac wyswietlony w prawo.
@@ -525,6 +587,53 @@ int DisplayController::PrintText(int font, int x, String text, int step_delay = 
             if (step_delay > 0)
                 delay(step_delay);
         }
+    }
+
+    return result_width;
+}
+
+//  ----------------------------------------------------------------------------
+int DisplayController::PrintMessage(int font, int x, int last_x, String & message, int & shift, int step_delay = 0)
+{
+    //  Wstepna konfiguracja zmiennych roboczych.
+    int xpos = x;
+    int result_width = 0;
+    bool substring = false;
+
+    //  Wyswietlenie tekstu na ekranie jezeli zostal zainicjalizowany.
+    if (this->initialized)
+    {
+        for (int c = 0; c < message.length(); c++)
+        {
+            //  Wyswietlenie pojedynczego znaku na ekranie.
+            int current_shift = c == 0 ? shift : 0;
+            int char_width = this->PrintCharWithShift(font, xpos, message[c], current_shift);
+
+            //  Wykrycie momentu kiedy znak mozna usunac z poczatku tekstu.
+            if (c == 0 && (char_width == 0))
+                substring = true;
+
+            //  Ustawienie przerwy miedzy znakami.
+            this->ClearColumn(xpos + char_width);
+
+            //  Obliczenie pozycji nastepnego znaku i aktualnej dlugosci wyswietlonego tekstu.
+            xpos = xpos + (char_width + 1);
+            result_width = result_width + (char_width + 1);
+
+            //  Wyjscie z petli kiedy pozycja znajduje sie poza rozmiarem wyswietlacza.
+            if (xpos > this->GetWidth())
+                break;
+        }
+    }
+
+    if (substring && message.length() > 0)
+    {
+        message = message.substring(1);
+        shift = 0;
+    }
+    else if (x <= last_x)
+    {
+        shift += 1;
     }
 
     return result_width;
