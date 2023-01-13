@@ -32,15 +32,17 @@ class Alarm
         int   alarm_state       =   ALARM_DISARMED;
         bool  enabled           =   false;
         bool  has_been_raised   =   false;
-        int   sleep_time        =   10;
-        bool  set_sleep_time    =   false;
 
         bool  CheckBaseTrigger(Time now_time);
         bool  CheckSuspendedTrigger(Time now_time);
+        void  StartSleep();
     
     public:
         int   hour    =   6;
         int   minute  =   30;
+
+        int   sleep_raise   =   0;
+        int   sleep_day     =   0;
 
         Alarm();
 
@@ -68,6 +70,7 @@ bool Alarm::CheckBaseTrigger(Time now_time)
     {
         this->alarm_state = ALARM_RAISED;
         this->has_been_raised = true;
+        this->sleep_day = now_time.date;
 
         return true;
     }
@@ -86,30 +89,37 @@ bool Alarm::CheckBaseTrigger(Time now_time)
  */
 bool Alarm::CheckSuspendedTrigger(Time now_time)
 {
-    if (this->set_sleep_time)
+    int current_time = (now_time.hour * 60 + now_time.min);
+    bool raise = false;
+
+    if (this->sleep_raise > 1440)
     {
-        //
-        this->set_sleep_time = false;
+        if (now_time.date > this->sleep_day && (this->sleep_raise % 1440) < current_time)
+            raise = true;
     }
-    /*int _all_minutes = this->hour * 60 + this->minute + this->sleep_time;
+    else if (this->sleep_raise < current_time)
+    {
+        raise = true;
+    }
 
-    int _hour = _all_minutes / 60;
-    int _minute = _all_minutes % 60;
-
-    if (_hour > 23)
-        _hour = _hour % 24;
-    
-    if (!this->has_been_raised && now_time.hour == _hour && now_time.min == _minute)
+    if (raise)
     {
         this->alarm_state = ALARM_RAISED;
         this->has_been_raised = true;
-
+        this->sleep_day = now_time.date;
         return true;
-    }*/
+    }
 
     return false;
 }
 
+//  ----------------------------------------------------------------------------
+//  Uruchom tryb drzemki.
+void Alarm::StartSleep()
+{
+    this->alarm_state = ALARM_SUSPENDED;
+    this->sleep_raise = (this->hour * 60) + this->minute + 10;
+}
 
 ////////////////////////////////////////////////////////////////////////////////
 //  *** PUBLIC METHOD BODIES ***
@@ -199,9 +209,7 @@ int Alarm::ProcessInput(char key)
             return ALARM_DISARMED;
         
         default:
-            this->alarm_state = ALARM_DISARMED;
-            //this->alarm_state = ALARM_SUSPENDED;
-            //this->set_sleep_time = true;
+            this->StartSleep();
             return ALARM_SUSPENDED;
     }
 

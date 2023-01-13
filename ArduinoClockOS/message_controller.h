@@ -57,6 +57,7 @@ class MessageController
 //  *** PRIVATE METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+//  Usuniecie starej wiadomosci z pamieci i przygotowanie do wyswietlenia nowej.
 void MessageController::ClearMessage()
 {
     this->message = "";
@@ -69,18 +70,29 @@ void MessageController::ClearMessage()
 //  *** PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
+/*  Konstruktor klasy modulu alarmu.
+ *  @param display_ctrl: Kontroler wyswietlacza.
+ */
 MessageController::MessageController(DisplayController * display_ctrl)
 {
     this->display_ctrl = display_ctrl;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Sprawdzenie stanu przetwarzania wyswietlania wiadomosci.
+ *  @return: Indeks stanu przetwarzania wyswietlania wiadomosci.
+ */
 int MessageController::CheckState()
 {
     return this->message.length() > 0 && width_in_pixels > 0 ? MESSAGE_DISPLAYING : MESSAGE_FINISHED;
 }
 
 //  ----------------------------------------------------------------------------
+/*  Uruchomienie wyswietlania wiadomosci.
+ *  @param message: Wiadomosc do wyswietlenia.
+ *  @param font: Indeks czcionki wyswietlanej wiadomosci.
+ *  @return: Indeks stanu przetwarzania wyswietlania wiadomosci.
+ */
 int MessageController::SetupMessage(String message, int font = FONT_DIGITAL)
 {
     this->ClearMessage();
@@ -102,6 +114,10 @@ int MessageController::SetupMessage(String message, int font = FONT_DIGITAL)
 }
 
 //  ----------------------------------------------------------------------------
+/*  Przetworzenie danych wejsciowych uzytkownika wprowadzonych z klawiatury.
+ *  @param input: Dane wejsciowe z klawiatury (wcisniety klawisz).
+ *  @return: Indeks stanu przetwarzania wyswietlania wiadomosci.
+ */
 int MessageController::ProcessInput(int input)
 {
     if (input >= KEYPAD_0_KEY && input <= KEYPAD_9_KEY)
@@ -127,6 +143,7 @@ int MessageController::ProcessInput(int input)
 }
 
 //  ----------------------------------------------------------------------------
+//  Odswiezenie ekranu - przesuniecie wiadomosci na ekranie.
 void MessageController::UpdateDisplay()
 {
     unsigned long milis = millis();

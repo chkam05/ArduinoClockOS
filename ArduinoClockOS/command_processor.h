@@ -21,13 +21,14 @@ class CommandProcessor
     private:
         GlobalController * controller;
 
-        String  params_data   =   "";
-        String  raw_data      =   "";
+        String  params_data     =   "";
+        String  raw_data        =   "";
+        int     params_idx_pos  =   0;
 
         //  Utility methods.
         void  Clear();
         bool  IsCharacterADigit(char c);
-        int   ParseMultiNumberData(int *data_array, int data_size);
+        int   ParseMultiNumberData(int *data_array, int data_size, int start_index = 0);
         int   ParseNumberData(int &value);
         bool  ValidateCommand(String command);
 
@@ -50,6 +51,9 @@ class CommandProcessor
         int   ProcessDateSetCommand();
         int   ProcessMessageCommand();
         int   ProcessTimeSetCommand();
+        int   ProcessWeatherAddCommand();
+        int   ProcessWeatherClearCommand();
+        int   ProcessWeatherSetCommand();
     
     public:
         CommandProcessor(GlobalController * controller);
@@ -87,7 +91,7 @@ bool CommandProcessor::IsCharacterADigit(char c)
  * @param data_size: Wielkosc tablicy wynikowej.
  * @return: Ilosc wypelnionych pol w tablicy wynikowej.
  */
-int CommandProcessor::ParseMultiNumberData(int *data_array, int data_size)
+int CommandProcessor::ParseMultiNumberData(int *data_array, int data_size, int start_index = 0)
 {
     //  Inicjalizacja zmiennych roboczych/wynikowych.
     int data_length = this->params_data.length();
@@ -95,16 +99,21 @@ int CommandProcessor::ParseMultiNumberData(int *data_array, int data_size)
     String worker = "";
 
     //  Przetworzenie danych wejsciowych na dane liczbowe.
-    for (int c = 0; c <= data_length; c++)
+    if (start_index < data_length)
     {
-        if (this->IsCharacterADigit(this->params_data[c]))
-            worker += this->params_data[c];
-
-        else if (worker != "" && step_index < data_size)
+        for (int c = start_index; c <= data_length; c++)
         {
-            data_array[step_index] = worker.toInt();
-            step_index ++;
-            worker = "";
+            if (this->IsCharacterADigit(this->params_data[c]))
+                worker += this->params_data[c];
+
+            else if (worker != "" && step_index < data_size)
+            {
+                data_array[step_index] = worker.toInt();
+                step_index ++;
+                worker = "";
+
+                this->params_idx_pos = c;
+            }
         }
     }
 
@@ -472,6 +481,51 @@ int CommandProcessor::ProcessTimeSetCommand()
     return COMMAND_NONE;
 }
 
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia dodania prognozy pogody.
+int CommandProcessor::ProcessWeatherAddCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("weather add");
+        return COMMAND_NONE;
+    }
+
+    int *date_array = new int[3] {0, 0, 0};
+    int last_step = this->ParseMultiNumberData(date_array, 3);
+
+    if (last_step == 3)
+    {
+        int *weather_array = new int[25] { 0 };
+        last_step = this->ParseMultiNumberData(weather_array, 25, this->params_idx_pos);
+
+        if (last_step > 0 && last_step <= 25)
+        {
+            this->controller->weather->AddWeather(
+                this->controller->clock_ctrl->ValidateYear(date_array[0]),
+                this->controller->clock_ctrl->ValidateMonth(date_array[1]),
+                this->controller->clock_ctrl->ValidateDay(date_array[2], date_array[1], date_array[0]),
+                weather_array,
+                weather_array[0]);
+            
+            this->NotifyConfigurationUpdated();
+            return COMMAND_PROCESSED_OK;
+        }
+    }
+
+    this->RaiseInvalidParameterError("weather add");
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia ustawienia prognozy pogody na dzisiaj.
+int CommandProcessor::ProcessWeatherClearCommand()
+{
+    this->controller->weather->ClearWeather();
+    this->NotifyConfigurationUpdated();
+    return COMMAND_PROCESSED_OK;
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 //  *** PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
@@ -533,6 +587,12 @@ int CommandProcessor::ProcessCommand(String raw_data)
 
     else if (this->ValidateCommand("/time set"))
         return this->ProcessTimeSetCommand();
+    
+    else if (this->ValidateCommand("/weather add"))
+        return this->ProcessWeatherAddCommand();
+    
+    else if (this->ValidateCommand("/weather clear"))
+        return this->ProcessWeatherClearCommand();
 
     else
         RaiseInvalidCommandError();

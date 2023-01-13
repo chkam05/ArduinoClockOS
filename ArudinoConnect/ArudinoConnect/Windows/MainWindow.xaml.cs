@@ -1,5 +1,6 @@
 ﻿using ArudinoConnect.Data;
 using ArudinoConnect.Events;
+using ArudinoConnect.Mappers;
 using ArudinoConnect.Static;
 using ArudinoConnect.Utilities;
 using chkam05.Tools.ControlsEx;
@@ -113,7 +114,8 @@ namespace ArudinoConnect.Windows
             set
             {
                 _weatherTreeData = value;
-                _weatherTreeData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherTreeData)); };
+                if (_weatherTreeData != null)
+                    _weatherTreeData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherTreeData)); };
                 OnPropertyChanged(nameof(WeatherTreeData));
             }
         }
@@ -124,7 +126,8 @@ namespace ArudinoConnect.Windows
             set
             {
                 _weatherViewData = value;
-                _weatherViewData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherViewData)); };
+                if (_weatherViewData != null)
+                    _weatherViewData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherViewData)); };
                 OnPropertyChanged(nameof(WeatherViewData));
             }
         }
@@ -510,7 +513,54 @@ namespace ArudinoConnect.Windows
         /// <param name="e"> Routed event arguments. </param>
         private void UploadAllConfigurationButtonEx_Click(object sender, RoutedEventArgs e)
         {
-            //
+            var data = new List<ConfigCommandCarrier>();
+            var title = "Configuration update.";
+            var message = "Updating configuration...";
+            var icon = PackIconKind.Gear;
+
+            if (DateTime.TryParseExact($"{DtYear}.{DtMonth}.{DtDay} {DtHour}:{DtMinute}:{DtSecond}", "yyyy.MM.dd HH:mm:ss",
+                CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
+            {
+                int week = DayOfWeekMap[dt.DayOfWeek];
+
+                data.Add(new ConfigCommandCarrier()
+                {
+                    Command = $"/date set {DtDay}.{week}.{DtMonth}.{DtYear}",
+                    CompleteMessage = "Date configuration updated.",
+                    FailMessage = "Date configuration cannot be updated. Please check configuration.",
+                });
+
+                data.Add(new ConfigCommandCarrier()
+                {
+                    Command = $"/time set {DtHour}:{DtMinute}:{DtSecond}",
+                    CompleteMessage = "Time configuration updated.",
+                    FailMessage = "Date configuration cannot be updated. Please check configuration.",
+                });
+            }
+
+            data.Add(new ConfigCommandCarrier()
+            {
+                Command = AlarmSet ? $"/alarm set {AlarmHour}:{AlarmMinute}" : "/alarm set disable",
+                CompleteMessage = "Alarm configuration updated.",
+                FailMessage = "Alarm configuration cannot be updated. Please check configuration.",
+            });
+
+            data.Add(new ConfigCommandCarrier()
+            {
+                Command = BrightnessAuto ? "/brightness set auto" : $"/brightness set {Brightness}",
+                CompleteMessage = "Brightness configuration updated.",
+                FailMessage = "Brightness configuration cannot be updated. Please check configuration.",
+            });
+
+            data.Add(new ConfigCommandCarrier()
+            {
+                Command = HourBeep.Value == 0 ? "/beep set disable" : $"/beep set {HourBeep.Value}",
+                CompleteMessage = "Beep hours configuration updated.",
+                FailMessage = "Beep hours configuration cannot be updated. Please check configuration.",
+            });
+
+            if (data.Count > 0)
+                UploadConfiguration(data, title, message, icon);
         }
 
         //  --------------------------------------------------------------------------------
@@ -738,7 +788,10 @@ namespace ArudinoConnect.Windows
 
             bgSetter.ProgressChanged += (s, ep) =>
             {
-                awaitMessage.Message = (string) ep.UserState;
+                string progressMessage = (string)ep.UserState;
+
+                if (progressMessage != null)
+                    awaitMessage.Message = progressMessage;
             };
 
             bgSetter.RunWorkerCompleted += (s, ec) =>
@@ -806,6 +859,15 @@ namespace ArudinoConnect.Windows
         #endregion CONFIGURATION METHODS
 
         #region CONSOLE INTERACTION METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on ConsoleClearButtonEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed event arguments. </param>
+        private void ConsoleClearButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            Console = string.Empty;
+        }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Method invoked after clicking on ConsoleSendButtonEx. </summary>
@@ -1131,7 +1193,39 @@ namespace ArudinoConnect.Windows
         /// <param name="e"> Routed event arguments. </param>
         private void UploadWeatherButtonEx_Click(object sender, RoutedEventArgs e)
         {
-            //
+            if (WeatherViewData != null && WeatherViewData.Any())
+            {
+                List<ConfigCommandCarrier> commands = new List<ConfigCommandCarrier>
+                {
+                    new ConfigCommandCarrier()
+                    {
+                        Command = $"/weather clear",
+                        CompleteMessage = $"Weather cleared.",
+                        FailMessage = $"Failed to clear message.",
+                        Message = $"Uploading weather data to Arduino..."
+                    }
+                };
+
+                foreach (var weatherData in WeatherViewData)
+                {
+                    string dateTime = weatherData.Date.Replace("-", ".");
+
+                    List<int> codes = weatherData.HourlyWeather
+                        .Select(w => WeatherDataMappers.MapWeatherCodeToArduinoCode(w.WeatherCode))
+                        .ToList();
+
+                    commands.Add(new ConfigCommandCarrier()
+                    {
+                        Command = $"/weather add {dateTime} {codes.Count},{string.Join(",", codes)}",
+                        CompleteMessage = $"Added weather for {dateTime}.",
+                        FailMessage = $"Weather for {dateTime} cannot be added. Please check data.",
+                        Message = $"Uploading weather for {dateTime}",
+                    });
+                }
+
+                if (commands.Count > 1)
+                    UploadConfiguration(commands, "Uploading weather", "Uploading weather data to Arduino...", PackIconKind.WeatherSunny);
+            }
         }
 
         #endregion WEATHER METHODS

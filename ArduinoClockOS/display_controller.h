@@ -496,6 +496,13 @@ int DisplayController::PrintChar(int font, int x, char character)
 }
 
 //  ----------------------------------------------------------------------------
+/* Wyswietlenie znaku z przesunieciem (ucieciem) na ekranie.
+ * @param font: Indeks tablicay zawierajacej czcionke w jakiej tekst ma zostac wyswietlony na ekranie.
+ * @param x: Indeks kolumny ekranu od ktorej znak ma zostac wyswietlony w prawo.
+ * @param character: Znak ktory ma zostac wyswietlony.
+ * @param shift: Przesuniecie w znaku.
+ * @return: Dlugosc wyswietlonego znaku.
+ */
 int DisplayController::PrintCharWithShift(int font, int x, char character, int shift = 0)
 {
     //  Zaladowanie znaku do pamieci podrecznej.
@@ -593,6 +600,14 @@ int DisplayController::PrintText(int font, int x, String text, int step_delay = 
 }
 
 //  ----------------------------------------------------------------------------
+/* Wyswietlenie wiadomosci na ekranie.
+ * @param font: Indeks tablicay zawierajacej czcionke w jakiej tekst ma zostac wyswietlony na ekranie.
+ * @param x: Indeks kolumny ekranu od ktorej text ma zostac wyswietlony w prawo.
+ * @param last_x: Indeks kolumny ekranu od ktorej mozna text ma zostac wyswietlony w prawo.
+ * @param message: Wiadomosc (referencja) ktora ma zostac wyswietlona.
+ * @param shift: Przesuniecie znaku (referencja).
+ * @param step_delay: Czas oczekiwania w milisekundach po wyswietleniu pojedynczego znaku.
+ */
 int DisplayController::PrintMessage(int font, int x, int last_x, String & message, int & shift, int step_delay = 0)
 {
     //  Wstepna konfiguracja zmiennych roboczych.

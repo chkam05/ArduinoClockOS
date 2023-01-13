@@ -29,9 +29,34 @@ namespace ArudinoConnect.Mappers
         public static string WEATHER_THUNDERY_HEAVY_RAIN = "Thundery Heavy Rain";       //  Burza i mocny deszcz
         public static string WEATHER_THUNDERY_SNOW_SHOWER = "Thundery Snow Shower";     //  Burza z śniegiem
 
+        public static int ARDUINO_SUNNY = 0;
+        public static int ARDUINO_PART_CLOUDY = 1;
+        public static int ARDUINO_CLOUDY = 2;
+        public static int ARDUINO_RAIN = 3;
+        public static int ARDUINO_SNOW = 4;
+        public static int ARDUINO_FOG = 5;
+        public static int ARDUINO_THUNDER = 6;
+
         private static Dictionary<string, int> _weatherArduinoCodeMap = new Dictionary<string, int>()
         {
-            //
+            { WEATHER_NAME_SUNNY, ARDUINO_SUNNY },
+            { WEATHER_NAME_PARTLY_CLOUDY, ARDUINO_PART_CLOUDY },
+            { WEATHER_NAME_CLOUDY, ARDUINO_CLOUDY },
+            { WEATHER_NAME_VERY_CLOUDY, ARDUINO_CLOUDY },
+            { WEATHER_NAME_FOG, ARDUINO_FOG },
+            { WEATHER_LIGHT_SHOWER, ARDUINO_RAIN },
+            { WEATHER_LIGHT_SLEET_SHOWER, ARDUINO_RAIN },
+            { WEATHER_LIGHT_SLEET, ARDUINO_RAIN },
+            { WEATHER_THUNDERY_SHOWER, ARDUINO_THUNDER },
+            { WEATHER_LIGHT_SNOW, ARDUINO_SNOW },
+            { WEATHER_HEAVY_SNOW, ARDUINO_SNOW },
+            { WEATHER_LIGHT_RAIN, ARDUINO_RAIN },
+            { WEATHER_HEAVY_SHOWER, ARDUINO_RAIN},
+            { WEATHER_HEAVY_RAIN, ARDUINO_RAIN },
+            { WEATHER_LIGHT_SNOW_SHOWER, ARDUINO_SNOW },
+            { WEATHER_HEAVY_SNOW_SHOWER, ARDUINO_SNOW },
+            { WEATHER_THUNDERY_HEAVY_RAIN, ARDUINO_THUNDER },
+            { WEATHER_THUNDERY_SNOW_SHOWER, ARDUINO_THUNDER },
         };
 
         private static Dictionary<string, PackIconKind> _weatherIconMap = new Dictionary<string, PackIconKind>()
@@ -110,7 +135,9 @@ namespace ArudinoConnect.Mappers
 
         public static int MapWeatherCodeToArduinoCode(int weatherCode)
         {
-            return 0;
+            string name = MapWeatherCodeToName(weatherCode);
+            return _weatherArduinoCodeMap.TryGetValue(name, out int value)
+                ? value : ARDUINO_SUNNY;
         }
 
         public static string MapWeatherCodeToName(int weatherCode)

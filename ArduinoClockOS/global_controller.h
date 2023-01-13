@@ -78,18 +78,21 @@ class GlobalController
         void  SetNextDisplayingState();
 
         //  Initialization
+        void  InitializeAlarm();
         void  InitializeClock();
         void  InitializeBuzzer();
         void  InitializeDisplay();
         void  InitializePhotoresistors();
         void  InitializeSdCard();
         void  InitializeTemperatureSensors();
+        void  InitializeWeather();
         void  Initialize();
 
     public:
         Alarm             * alarm;
         KeypadController  * keypad_ctrl;
         SerialController  * serial_ctrl;
+        Weather           * weather;
 
         BuzzerController              * buzzer_ctrl;
         ClockController               * clock_ctrl;
@@ -174,6 +177,10 @@ void GlobalController::DisplayAlarmIsSet()
         case ALARM_SUSPENDED:
             this->display_ctrl->DrawSprite(SPRITE_ALARM, position, 2);
             break;
+        
+        default:
+            for (int i = position; i < position + 8; i++)
+                this->display_ctrl->ClearColumn(i);
     }    
 }
 
@@ -230,7 +237,8 @@ void GlobalController::DisplayTemperatureOutside()
     dsp_str->_xpos  =   8;
     dsp_str->_width +=  2;
 
-    this->display_ctrl->DrawSprite(SPRITE_WEATHER, 0, 0);
+    int weather_icon = this->weather->GetWeather(this->clock_ctrl->Now());
+    this->display_ctrl->DrawSprite(SPRITE_WEATHER, 0, weather_icon);
     this->display_ctrl->PrintDS(dsp_str, true);
 }
 
@@ -358,6 +366,20 @@ void GlobalController::InitializeTemperatureSensors()
 }
 
 //  ----------------------------------------------------------------------------
+//  Inicjalizacja komponentu alarmu.
+void GlobalController::InitializeAlarm()
+{
+    this->alarm = new Alarm();
+}
+
+//  ----------------------------------------------------------------------------
+//  Inicjalizacja komponentu prognozy pogody.
+void GlobalController::InitializeWeather()
+{
+    this->weather = new Weather(this->sdcard_ctrl);
+}
+
+//  ----------------------------------------------------------------------------
 //  Inicjalizacja, konfiguracja i test urzadzen peryferyjnych.
 void GlobalController::Initialize()
 {
@@ -389,6 +411,10 @@ void GlobalController::Initialize()
     //  Inicjalizacja, konfiguracja i test modulu kontrolera wyswietlacza.
     this->InitializeDisplay();
 
+    //  Inicjalizacja dodatkowych zaleznych komponentow.
+    this->InitializeAlarm();
+    this->InitializeWeather();
+
     //  Zaladowanie danych z pliku.
     this->LoadData();
 }
@@ -400,7 +426,6 @@ void GlobalController::Initialize()
 //  Konstruktor klasy kontrolera globalnego
 GlobalController::GlobalController()
 {
-    this->alarm = new Alarm();
     this->Initialize();
 
     this->initialized = true;

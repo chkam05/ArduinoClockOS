@@ -249,9 +249,36 @@
                 <Grid>
 
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
                         <RowDefinition Height="*"/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,0,0,1"
+                        Grid.Row="0">
+
+                        <Grid
+                            Margin="4">
+
+                            <StackPanel
+                                HorizontalAlignment="Right"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Content="Clear"
+                                    IconHeight="12"
+                                    IconKind="Clear"
+                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    Click="ConsoleClearButtonEx_Click"/>
+
+                            </StackPanel>
+                            
+                        </Grid>
+
+                    </Border>
 
                     <controlsex:TextBoxEx
                         Name="consoleTextBoxEx"
@@ -261,7 +288,7 @@
                         BorderThickness="0"
                         CornerRadius="0"
                         FontFamily="Cascadia Code PL Light"
-                        Grid.Row="0"
+                        Grid.Row="1"
                         HorizontalContentAlignment="Left"
                         IsReadOnly="True"
                         Padding="4"
@@ -276,10 +303,9 @@
                         Background="LightGray"
                         BorderBrush="DarkGray"
                         BorderThickness="0,1,0,0"
-                        Grid.Row="1">
+                        Grid.Row="2">
 
                         <Grid
-                            Grid.Row="1"
                             Margin="4">
 
                             <Grid.ColumnDefinitions>
