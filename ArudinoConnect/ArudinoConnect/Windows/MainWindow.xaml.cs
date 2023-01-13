@@ -419,7 +419,7 @@ namespace ArudinoConnect.Windows
             string failMessage = "Time & Date cannot be configured. Please check configuration.";
             PackIconKind icon = PackIconKind.CalendarClock;
 
-            if (DateTime.TryParseExact($"{DtYear}.{DtMonth}.{DtDay} {DtHour}:{DtMinute}:{DtSecond}", "yyyy.MM.dd HH:mm:ss", 
+            if (DateTime.TryParseExact($"{DtYear}.{DtMonth}.{DtDay} {DtHour}:{DtMinute}:{DtSecond}", "yyyy.M.d H:m:s", 
                 CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
             {
                 int week = DayOfWeekMap[dt.DayOfWeek];
@@ -437,7 +437,7 @@ namespace ArudinoConnect.Windows
                     {
                         Command = $"/time set {DtHour}:{DtMinute}:{DtSecond}",
                         CompleteMessage = "Time configuration updated.",
-                        FailMessage = "Date configuration cannot be updated. Please check configuration.",
+                        FailMessage = "Time configuration cannot be updated. Please check configuration.",
                     }
                 };
 
@@ -805,7 +805,7 @@ namespace ArudinoConnect.Windows
                 else if (result != null && result.Any())
                     foreach (var singleResult in result)
                     {
-                        if (singleResult.Result.Success && singleResult.Result.Data == "OK")
+                        if (singleResult.Result.Success && singleResult.Result.Data.StartsWith("OK"))
                             resultMessage += $"{singleResult.CompleteMessage}{Environment.NewLine}";
                         else
                             resultMessage += $"{singleResult.FailMessage}{Environment.NewLine}";
@@ -844,7 +844,7 @@ namespace ArudinoConnect.Windows
             {
                 var result = ec.Result as CommandResult;
 
-                if (result != null && result.Success && result.Data == "OK")
+                if (result != null && result.Success && result.Data.StartsWith("OK"))
                     awaitMessage.Message = data.CompleteMessage;
                 else
                     awaitMessage.Message = data.FailMessage;

@@ -256,7 +256,6 @@ int Weather::GetWeather(Time date_time)
     
     int hour_mapped = (((100 * date_time.hour) / 24) * this->weather[0]) / 100;
     int hour_index = max(0, min(24, hour_mapped));
-    Serial.println("Selected index: " + String(hour_index));
     return max(0, min(6, this->weather[hour_index+1]));
 }
 
