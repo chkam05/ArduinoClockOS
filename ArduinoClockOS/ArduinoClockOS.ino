@@ -3,21 +3,6 @@
 //  KAMIL KARPIŃSKI
 ////////////////////////////////////////////////////////////////////////////////
 
-/*  TO DO:
- *  - Zapis ustawien na karte i ich wczytywanie
- *  - Wyswietlanie wiadomosci.
- *  - Pogoda (wgrywanie, przetrzymywanie, ladowanie)
- *    int[25] -> pierwszy element (ile godzin), nastepne to ustawienie pogody
- *    Dane:
- *      - 0 - brak pogody
- *      - 1 - na caly dzien
- *      - 2 - dzien/noc (18-5 i 6-17)
- *      - 3 - ...
- *      - 24 - co godzine inna
- *  - Tone player
- *  - Visualisation
- */
-
 ////////////////////////////////////////////////////////////////////////////////
 //  *** INCLUDED LIBRARIES ***
 ////////////////////////////////////////////////////////////////////////////////
