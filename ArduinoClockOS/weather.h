@@ -204,12 +204,16 @@ int Weather::GetWeather(Time date_time)
         if (this->sdcard_ctrl->IsInitialized() && this->sdcard_ctrl->IsMounted() && this->sdcard_ctrl->FileExists(WEATHER_FILE_NAME))
         {
             File weather_file = this->sdcard_ctrl->OpenFileToRead(WEATHER_FILE_NAME);
-
-            char character = ' ';
-            String line = "";
             bool stop_reading = false;
 
-            while (weather_file.available() && !stop_reading) {
+            while (weather_file.available())
+            {
+                char character = ' ';
+                String line = "";
+                
+                if (stop_reading)
+                    break;
+                
                 while (weather_file.available() && character != '\n')
                 {
                     character = weather_file.read();
@@ -230,19 +234,19 @@ int Weather::GetWeather(Time date_time)
 
                 if (last_step == 3)
                 {
-                    if (CheckDateValidity(date_array))
-                        continue;
-                    
-                    int *weather_array = new int[25] { 0 };
-                    last_step = this->ParseData(line, weather_array, 25, this->data_idx_pos);
-
-                    if (last_step > 0 && last_step <= 25)
+                    if (CheckDateValidity(date_array) == 0)
                     {
-                        for (int i = 0; i < last_step; i++)
-                            weather[i] = weather_array[i];
-                        
-                        stop_reading = true;
-                        break;
+                        int *weather_array = new int[25] { 0 };
+                        last_step = this->ParseData(line, weather_array, 25, this->data_idx_pos);
+
+                        if (last_step > 0 && last_step <= 25)
+                        {
+                            for (int i = 0; i < last_step; i++)
+                                weather[i] = weather_array[i];
+                            
+                            stop_reading = true;
+                            break;
+                        }
                     }
                 }
             }

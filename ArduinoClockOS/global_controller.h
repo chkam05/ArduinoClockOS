@@ -910,16 +910,9 @@ void GlobalController::SaveData()
         String brightness_data = this->brightness_auto ? "auto" : String(this->display_ctrl->GetBrightness());
 
         file.println("[configuration]");
-
-        this->serial_ctrl->WriteRawData("Saving alarm: " + alarm_data, SERIAL_COM);
         file.println("alarm=" + alarm_data);
-
-        this->serial_ctrl->WriteRawData("Saving beep hours: " + beep_data, SERIAL_COM);
         file.println("beep_hours=" + beep_data);
-
-        this->serial_ctrl->WriteRawData("Saving brightness: " + brightness_data, SERIAL_COM);
         file.println("brightness=" + brightness_data);
-
         file.close();
     }
 }
