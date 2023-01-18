@@ -12,12 +12,18 @@
     mc:Ignorable="d"
     
     DataContext="{Binding RelativeSource={RelativeSource Self}}"
+    Icon="/AppIco.ico"
     Title="Arduino Connect"
     Height="500"
-    Width="900">
+    Width="900"
+    Closing="Window_Closing">
 
     <Window.Resources>
         <ResourceDictionary>
+
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/WeatherTemplates.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
             
             <!-- CONVERTERS -->
             <conv:BoolInversionConverter x:Key="BoolInversionConverter"/>
@@ -35,194 +41,6 @@
                     Text="{Binding Converter={StaticResource HourBeepTupleConverter}, Mode=OneWay}"/>
             </DataTemplate>
 
-            <HierarchicalDataTemplate x:Key="WeatherDataTreeViewTemplate" ItemsSource="{Binding Subitems}">
-                <StackPanel
-                    Orientation="Horizontal">
-
-                    <TextBlock
-                        Margin="0,0,8,0"
-                        Text="{Binding Name}"/>
-
-                    <TextBlock
-                        Text="{Binding Value}"/>
-                </StackPanel>
-            </HierarchicalDataTemplate>
-
-            <DataTemplate x:Key="WeatherDataHourlyViewItemTemplate">
-                <Border
-                    BorderBrush="Black"
-                    BorderThickness="1"
-                    CornerRadius="4"
-                    Padding="1"
-                    Width="56">
-                    
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="*"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <TextBlock
-                            Grid.Row="0"
-                            HorizontalAlignment="Center"
-                            Text="{Binding Hour}"/>
-
-                        <materialDesign:PackIcon
-                            Grid.Row="1"
-                            Height="16"
-                            HorizontalAlignment="Center"
-                            Kind="{Binding WeatherIcon}"
-                            Width="16"/>
-
-                        <TextBlock
-                            Grid.Row="2"
-                            HorizontalAlignment="Center"
-                            Text="{Binding WeatherName}"
-                            TextAlignment="Center"
-                            TextWrapping="WrapWithOverflow"/>
-                    </Grid>
-                </Border>
-            </DataTemplate>
-
-            <DataTemplate x:Key="WeatherDataViewItemTemplate">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <TextBlock
-                        Grid.Column="0"
-                        HorizontalAlignment="Center"
-                        Margin="0,0,16,0"
-                        Text="{Binding Date}"
-                        VerticalAlignment="Top"/>
-
-                    <Grid
-                        Grid.Column="1">
-
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <Grid
-                            Grid.Row="0">
-
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-
-                            <materialDesign:PackIcon
-                                Grid.Column="0"
-                                Grid.Row="0"
-                                Height="12"
-                                Kind="Sunrise"
-                                Margin="0,0,4,0"
-                                Width="12"/>
-
-                            <TextBlock
-                                Grid.Column="1"
-                                Grid.Row="0"
-                                Margin="0,0,4,0"
-                                Text="Sunrise:"/>
-
-                            <TextBlock
-                                Grid.Column="2"
-                                Grid.Row="0"
-                                Margin="0,0,8,0"
-                                Text="{Binding Sunrise}"/>
-
-                            <materialDesign:PackIcon
-                                Grid.Column="3"
-                                Grid.Row="0"
-                                Height="12"
-                                Kind="WeatherSunset"
-                                Margin="0,0,4,0"
-                                Width="12"/>
-
-                            <TextBlock
-                                Grid.Column="4"
-                                Grid.Row="0"
-                                Margin="0,0,4,0"
-                                Text="Sunset:"/>
-
-                            <TextBlock
-                                Grid.Column="5"
-                                Grid.Row="0"
-                                Margin="0,0,8,0"
-                                Text="{Binding Sunset}"/>
-
-                            <materialDesign:PackIcon
-                                Grid.Column="0"
-                                Grid.Row="1"
-                                Height="12"
-                                Kind="MoonFull"
-                                Margin="0,0,4,0"
-                                Width="12"/>
-
-                            <TextBlock
-                                Grid.Column="1"
-                                Grid.Row="1"
-                                Margin="0,0,4,0"
-                                Text="Moonrise:"/>
-
-                            <TextBlock
-                                Grid.Column="2"
-                                Grid.Row="1"
-                                Margin="0,0,8,0"
-                                Text="{Binding Moonrise}"/>
-
-                            <materialDesign:PackIcon
-                                Grid.Column="3"
-                                Grid.Row="1"
-                                Height="12"
-                                Kind="MoonNew"
-                                Margin="0,0,4,0"
-                                Width="12"/>
-
-                            <TextBlock
-                                Grid.Column="4"
-                                Grid.Row="1"
-                                Margin="0,0,4,0"
-                                Text="Moonset:"/>
-
-                            <TextBlock
-                                Grid.Column="5"
-                                Grid.Row="1"
-                                Margin="0,0,8,0"
-                                Text="{Binding Moonset}"/>
-
-                        </Grid>
-
-                        <controlsex:ListViewEx
-                            BorderBrush="{x:Null}"
-                            BorderThickness="0"
-                            CornerRadius="0"
-                            Grid.Row="1"
-                            ItemsSource="{Binding HourlyWeather}"
-                            ItemTemplate="{StaticResource WeatherDataHourlyViewItemTemplate}">
-                            <controlsex:ListViewEx.ItemsPanel>
-                                <ItemsPanelTemplate>
-                                    <WrapPanel Orientation="Horizontal"/>
-                                </ItemsPanelTemplate>
-                            </controlsex:ListViewEx.ItemsPanel>
-                        </controlsex:ListViewEx>
-                    </Grid>
-                </Grid>
-            </DataTemplate>
-            
         </ResourceDictionary>
     </Window.Resources>
     
@@ -230,16 +48,18 @@
 
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <controlsex:TabControlEx
             x:Name="MainTabControlEx"
+            BorderBrush="{x:Null}"
+            BorderThickness="0"
             HeaderBackground="LightGray"
             HeaderBorderBrush="DarkGray"
             CornerRadius="0"
-            Grid.Row="2">
+            HeaderBorderThickness="0,0,0,1"
+            Grid.Row="1">
 
             <controlsex:TabItemEx
                 IconKind="Console"
@@ -271,7 +91,6 @@
                                     Content="Clear"
                                     IconHeight="12"
                                     IconKind="Clear"
-                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
                                     Click="ConsoleClearButtonEx_Click"/>
 
                             </StackPanel>
@@ -315,7 +134,7 @@
 
                             <controlsex:TextBoxEx
                                 Background="White"
-                                IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                 Grid.Column="0"
                                 Margin="0,0,4,0"
                                 MouseOverBackground="White"
@@ -328,7 +147,7 @@
                                 Content="Send"
                                 IconHeight="12"
                                 IconKind="Send"
-                                IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                 Click="ConsoleSendButtonEx_Click"/>
 
                         </Grid>
@@ -360,7 +179,7 @@
                             BorderBrush="{x:Null}"
                             BorderThickness="0"
                             CornerRadius="0"
-                            ItemsSource="{Binding WeatherViewData}"
+                            ItemsSource="{Binding DataController.WeatherViewData}"
                             ItemTemplate="{StaticResource WeatherDataViewItemTemplate}"
                             Margin="0,0,4,0"
                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
@@ -392,7 +211,7 @@
                             BorderThickness="0"
                             CornerRadius="0"
                             Grid.Column="2"
-                            ItemsSource="{Binding WeatherTreeData}"
+                            ItemsSource="{Binding DataController.WeatherTreeData}"
                             ItemTemplate="{StaticResource WeatherDataTreeViewTemplate}"/>
                     </Grid>
 
@@ -420,7 +239,7 @@
                                     Content="Upload to Arduino"
                                     IconHeight="12"
                                     IconKind="TrayUpload"
-                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                     Margin="0,0,4,0"
                                     Click="UploadWeatherButtonEx_Click"/>
 
@@ -588,7 +407,7 @@
                                             HorizontalAlignment="Right"
                                             IconHeight="12"
                                             IconKind="TrayUpload"
-                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                             Margin="8,8,8,0"
                                             Padding="8,4"
                                             Click="UploadDateTimeConfigurationButtonEx_Click"/>
@@ -666,7 +485,7 @@
                                             HorizontalAlignment="Right"
                                             IconHeight="12"
                                             IconKind="TrayUpload"
-                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                             Margin="8,8,8,0"
                                             Padding="8,4"
                                             Click="UploadAlarmConfigurationButtonEx_Click"/>
@@ -731,7 +550,7 @@
                                             HorizontalAlignment="Right"
                                             IconHeight="12"
                                             IconKind="TrayUpload"
-                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                             Margin="8,8,8,0"
                                             Padding="8,4"
                                             Click="UploadBrightnessConfigurationButtonEx_Click"/>
@@ -782,7 +601,7 @@
                                             HorizontalAlignment="Right"
                                             IconHeight="12"
                                             IconKind="TrayUpload"
-                                            IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                            IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                             Margin="8,8,8,0"
                                             Padding="8,4"
                                             Click="UploadHourBeepConfigurationButtonEx_Click"/>
@@ -821,7 +640,7 @@
                                     Content="Upload to Arduino"
                                     IconHeight="12"
                                     IconKind="TrayUpload"
-                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                     Margin="0,0,4,0"
                                     Click="UploadAllConfigurationButtonEx_Click"/>
                                 
@@ -830,7 +649,7 @@
                                     Content="Load from Arduino"
                                     IconHeight="12"
                                     IconKind="TrayDownload"
-                                    IsEnabled="{Binding SerialPortConnection.IsConnected}"
+                                    IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                     Click="DownloadConfigurationButtonEx_Click"/>
 
                             </StackPanel>
@@ -846,9 +665,11 @@
 
         <Border
             Background="LightGray"
-            BorderBrush="DarkGray"
+            BorderBrush="{x:Null}"
             BorderThickness="0"
-            Grid.Row="0">
+            Grid.Row="0"
+            Margin="0,0,0,-1"
+            Padding="0,0,0,1">
 
             <Grid>
 
@@ -858,7 +679,7 @@
                     Orientation="Horizontal">
 
                     <controlsex:ComboBoxEx
-                        IsEnabled="{Binding SerialPortConnection.IsConnected,
+                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected,
                             Mode=OneWay,
                             Converter={StaticResource BoolInversionConverter}}"
                         ItemsSource="{Binding DevicesCollection}"
@@ -867,7 +688,7 @@
                         SelectedItem="{Binding SelectedDevice}"/>
 
                     <controlsex:ComboBoxEx
-                        IsEnabled="{Binding SerialPortConnection.IsConnected,
+                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected,
                             Mode=OneWay,
                             Converter={StaticResource BoolInversionConverter}}"
                         ItemsSource="{Binding BaudRatesCollection}"
@@ -876,7 +697,7 @@
                         SelectedItem="{Binding BaudRate}"/>
 
                     <controlsex:ButtonEx
-                        Content="{Binding SerialPortConnection.IsConnected, 
+                        Content="{Binding DataController.SerialPortConnection.IsConnected, 
                             Mode=OneWay,
                             Converter={StaticResource SerialPortStateStringConverter}}"
                         IconHeight="16"

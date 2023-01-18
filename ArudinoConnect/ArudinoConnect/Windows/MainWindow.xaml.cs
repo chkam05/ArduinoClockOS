@@ -11,25 +11,19 @@ using MaterialDesignThemes.Wpf;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Collections.Specialized;
 using System.ComponentModel;
+using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Shapes;
+using System.Windows.Markup;
 
 namespace ArudinoConnect.Windows
 {
-    public partial class MainWindow : Window, INotifyPropertyChanged, IDisposable
+    public partial class MainWindow : Window, INotifyPropertyChanged
     {
 
         //  CONST
@@ -55,13 +49,11 @@ namespace ArudinoConnect.Windows
 
         //  VARIABLES
 
+        private DataController _dataController;
         private ObservableCollection<int> _baudRatesCollection;
         private ObservableCollection<ComPort> _devicesCollection;
-        private ObservableCollection<WeatherTreeItem> _weatherTreeData;
-        private ObservableCollection<WeatherViewItem> _weatherViewData;
         private int _baudRate;
         private ComPort _selectedDevice;
-        private SerialPortConnection _serialPortConnection;
         private BackgroundWorker _timeUpdater;
 
         private string _console;
@@ -86,6 +78,18 @@ namespace ArudinoConnect.Windows
 
         //  GETTERS & SETTERS
 
+        public System.Windows.Forms.NotifyIcon TrayIcon;
+
+        public DataController DataController
+        {
+            get => _dataController;
+            private set
+            {
+                _dataController = value;
+                OnPropertyChanged(nameof(DataController));
+            }
+        }
+
         public ObservableCollection<int> BaudRatesCollection
         {
             get => _baudRatesCollection;
@@ -105,30 +109,6 @@ namespace ArudinoConnect.Windows
                 _devicesCollection = value;
                 _devicesCollection.CollectionChanged += (s, e) => OnPropertyChanged(nameof(DevicesCollection));
                 OnPropertyChanged(nameof(DevicesCollection));
-            }
-        }
-
-        public ObservableCollection<WeatherTreeItem> WeatherTreeData
-        {
-            get => _weatherTreeData;
-            set
-            {
-                _weatherTreeData = value;
-                if (_weatherTreeData != null)
-                    _weatherTreeData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherTreeData)); };
-                OnPropertyChanged(nameof(WeatherTreeData));
-            }
-        }
-
-        public ObservableCollection<WeatherViewItem> WeatherViewData
-        {
-            get => _weatherViewData;
-            set
-            {
-                _weatherViewData = value;
-                if (_weatherViewData != null)
-                    _weatherViewData.CollectionChanged += (s, e) => { OnPropertyChanged(nameof(WeatherViewData)); };
-                OnPropertyChanged(nameof(WeatherViewData));
             }
         }
 
@@ -152,16 +132,6 @@ namespace ArudinoConnect.Windows
             {
                 _selectedDevice = value;
                 OnPropertyChanged(nameof(SelectedDevice));
-            }
-        }
-
-        public SerialPortConnection SerialPortConnection
-        {
-            get => _serialPortConnection;
-            set
-            {
-                _serialPortConnection = value;
-                OnPropertyChanged(nameof(SerialPortConnection));
             }
         }
 
@@ -345,8 +315,8 @@ namespace ArudinoConnect.Windows
         /// <summary> MainWindow class constructor. </summary>
         public MainWindow()
         {
-            SerialPortConnection = new SerialPortConnection();
-            SerialPortConnection.ReceivedMessage += ReceiveMessage;
+            DataController = DataController.Instance;
+            DataController.SerialPortConnection.ReceivedMessage += ReceiveMessage;
 
             _timeUpdater = new BackgroundWorker();
             _timeUpdater.WorkerReportsProgress = true;
@@ -357,18 +327,28 @@ namespace ArudinoConnect.Windows
             SetupDataCollections();
             InitializeComponent();
 
+            TrayIcon = new System.Windows.Forms.NotifyIcon();
+            TrayIcon.BalloonTipText = "Arduino Connect has been minimised. Click the tray icon to show.";
+            TrayIcon.BalloonTipTitle = "Show Arduino Connect";
+            TrayIcon.Text = "Arduino Connect";
+            Stream iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/ArudinoConnect;component/AppIco.ico")).Stream;
+            TrayIcon.Icon = new System.Drawing.Icon(iconStream);
+            TrayIcon.MouseClick += TrayIcon_MouseClick;
+            TrayIcon.DoubleClick += TrayIcon_DoubleClick;
+            TrayIcon.Visible = true;
+
             _timeUpdater.RunWorkerAsync();
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Shutting down application - disposing objects. </summary>
-        public void Dispose()
+        /// <summary> Method invoked after changing Window state. </summary>
+        /// <param name="e"> Event arguments. </param>
+        protected override void OnStateChanged(EventArgs e)
         {
-            if (SerialPortConnection != null && SerialPortConnection.IsConnected)
-                SerialPortConnection.Disconnect();
+            if (WindowState == WindowState.Minimized)
+                this.Hide();
 
-            if (_timeUpdater.IsBusy)
-                _timeUpdater.CancelAsync();
+            base.OnStateChanged(e);
         }
 
         #endregion CLASS METHODS
@@ -381,16 +361,16 @@ namespace ArudinoConnect.Windows
         /// <param name="e"> Routed event arguments. </param>
         private void ConnectionButtonEx_Click(object sender, RoutedEventArgs e)
         {
-            if (SerialPortConnection != null)
+            if (DataController.SerialPortConnection != null)
             {
-                if (!SerialPortConnection.IsConnected)
+                if (!DataController.SerialPortConnection.IsConnected)
                 {
-                    SerialPortConnection.PortCom = SelectedDevice.PortName;
-                    SerialPortConnection.Connect();
+                    DataController.SerialPortConnection.PortCom = SelectedDevice.PortName;
+                    DataController.SerialPortConnection.Connect();
                 }
                 else
                 {
-                    SerialPortConnection.Disconnect();
+                    DataController.SerialPortConnection.Disconnect();
                 }
             }
         }
@@ -752,9 +732,7 @@ namespace ArudinoConnect.Windows
         private void UploadConfiguration(List<ConfigCommandCarrier> data, 
             string title, string message, PackIconKind icon, bool allowCancel = false)
         {
-            var bgSetter = new BackgroundWorker();
-            bgSetter.WorkerReportsProgress = true;
-            bgSetter.WorkerSupportsCancellation = allowCancel;
+            SerialCommander scm = new SerialCommander(DataController.SerialPortConnection);
 
             var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer,
                 title, message, icon);
@@ -762,31 +740,7 @@ namespace ArudinoConnect.Windows
             awaitMessage.AllowCancel = allowCancel;
             awaitMessage.KeepFinishedOpen = true;
 
-            bgSetter.DoWork += (s, ew) =>
-            {
-                var result = new List<ConfigCommandResult>();
-
-                foreach (var singleCommand in data)
-                {
-                    if (ew.Cancel)
-                        break;
-
-                    bgSetter.ReportProgress(data.IndexOf(singleCommand), singleCommand.Message);
-
-                    var singleCommandResult = ExecuteCommand(singleCommand.Command);
-
-                    result.Add(new ConfigCommandResult()
-                    {
-                        Result = singleCommandResult,
-                        CompleteMessage = singleCommand.CompleteMessage,
-                        FailMessage = singleCommand.FailMessage,
-                    });
-                }
-
-                ew.Result = result;
-            };
-
-            bgSetter.ProgressChanged += (s, ep) =>
+            ProgressChangedEventHandler onProgress = (s, ep) =>
             {
                 string progressMessage = (string)ep.UserState;
 
@@ -794,7 +748,7 @@ namespace ArudinoConnect.Windows
                     awaitMessage.Message = progressMessage;
             };
 
-            bgSetter.RunWorkerCompleted += (s, ec) =>
+            RunWorkerCompletedEventHandler onComplete = (s, ec) =>
             {
                 var result = ec.Result as List<ConfigCommandResult>;
                 string resultMessage = string.Empty;
@@ -819,7 +773,7 @@ namespace ArudinoConnect.Windows
             };
 
             InternalMessagesExContainer.ShowMessage(awaitMessage);
-            bgSetter.RunWorkerAsync();
+            scm.UploadConfigurationAsync(data, true, allowCancel, onProgress, onComplete);
         }
 
         //  --------------------------------------------------------------------------------
@@ -827,20 +781,14 @@ namespace ArudinoConnect.Windows
         /// <param name="data"> Configuration command data carrier object. </param>
         private void UploadSingleConfiguration(ConfigCommandCarrier data)
         {
-            var bgSetter = new BackgroundWorker();
+            SerialCommander scm = new SerialCommander(DataController.SerialPortConnection);
 
             var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer,
                 data.Title, data.Message, data.Icon);
 
             awaitMessage.KeepFinishedOpen = true;
 
-            bgSetter.DoWork += (s, ew) =>
-            {
-                var result = ExecuteCommand(data.Command);
-                ew.Result = result;
-            };
-
-            bgSetter.RunWorkerCompleted += (s, ec) =>
+            RunWorkerCompletedEventHandler onComplete = (s, ec) =>
             {
                 var result = ec.Result as CommandResult;
 
@@ -853,7 +801,7 @@ namespace ArudinoConnect.Windows
             };
 
             InternalMessagesExContainer.ShowMessage(awaitMessage);
-            bgSetter.RunWorkerAsync();
+            scm.UploadSingleConfigurationAsync(data, true, onComplete);
         }
 
         #endregion CONFIGURATION METHODS
@@ -988,7 +936,7 @@ namespace ArudinoConnect.Windows
         /// <summary> Send message to serial port device. </summary>
         private void SendMessage()
         {
-            if (!string.IsNullOrEmpty(ConsoleMessage) && SerialPortConnection?.IsConnected == true)
+            if (!string.IsNullOrEmpty(ConsoleMessage) && DataController.SerialPortConnection?.IsConnected == true)
             {
                 if (ConsoleMessage.ToLower() == "/help")
                 {
@@ -1014,7 +962,7 @@ namespace ArudinoConnect.Windows
                     return;
                 }
 
-                SerialPortConnection.SendMessage(ConsoleMessage);
+                DataController.SerialPortConnection.SendMessage(ConsoleMessage);
                 consoleTextBoxEx.ScrollToEnd();
                 ConsoleMessage = string.Empty;
             }
@@ -1079,6 +1027,41 @@ namespace ArudinoConnect.Windows
 
         #endregion SETUP METHODS
 
+        #region TRAY ICON
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on tray icon. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Mouse event arguments. </param>
+        private void TrayIcon_MouseClick(object sender, System.Windows.Forms.MouseEventArgs e)
+        {
+            var application = (App)Application.Current;
+            var trayWindow = application.Windows.Cast<Window>()
+                .FirstOrDefault(w => w.GetType() == typeof(TrayWindow));
+
+            if (trayWindow == null)
+                trayWindow = new TrayWindow();
+            trayWindow.Show();
+
+            var desktopWorkingArea = System.Windows.SystemParameters.WorkArea;
+            trayWindow.Top = desktopWorkingArea.Bottom - (trayWindow.ActualHeight + 8);
+            trayWindow.Left = desktopWorkingArea.Right - (trayWindow.ActualWidth + 8);
+            trayWindow.Activate();
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after double clicking on tray icon. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Event arguments. </param>
+        private void TrayIcon_DoubleClick(object sender, EventArgs e)
+        {
+            this.Show();
+            this.WindowState = WindowState.Normal;
+            this.Activate();
+        }
+
+        #endregion TRAY ICON
+
         #region UTILITY METHODS
 
         //  --------------------------------------------------------------------------------
@@ -1092,7 +1075,7 @@ namespace ArudinoConnect.Windows
             string message = null;
             bool successed = false;
 
-            if (SerialPortConnection.IsConnected)
+            if (DataController.SerialPortConnection.IsConnected)
             {
                 bool cancel = false;
                 DateTime dtStart = DateTime.Now;
@@ -1116,12 +1099,12 @@ namespace ArudinoConnect.Windows
                     }
                 });
 
-                SerialPortConnection.ReceivedMessage += receiver;
-                SerialPortConnection.SendMessage(command);
+                DataController.SerialPortConnection.ReceivedMessage += receiver;
+                DataController.SerialPortConnection.SendMessage(command);
 
                 while (!cancel && string.IsNullOrEmpty(message) && dtStart.AddMilliseconds(timeout) > DateTime.Now) { };
 
-                SerialPortConnection.ReceivedMessage -= receiver;
+                DataController.SerialPortConnection.ReceivedMessage -= receiver;
             }
 
             return new CommandResult(successed, message);
@@ -1137,51 +1120,13 @@ namespace ArudinoConnect.Windows
         /// <param name="e"> Routed event arguments. </param>
         private void DownloadWeatherButtonEx_Click(object sender, RoutedEventArgs e)
         {
-            var downloader = new WeatherDownloader("Katowice");
-            var bgDwonloader = new BackgroundWorker();
-
-            bgDwonloader.WorkerSupportsCancellation = true;
-
-            var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer, 
+            var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer,
                 "Weather", "Downloading weather...", PackIconKind.WeatherSunny);
 
             awaitMessage.AllowCancel = true;
             awaitMessage.KeepFinishedOpen = false;
 
-            awaitMessage.OnClose += (s, ec) =>
-            {
-                if (ec.Result == InternalMessageResult.Cancel)
-                    bgDwonloader.CancelAsync();
-            };
-
-            bgDwonloader.DoWork += (s, ew) =>
-            {
-                if (!ew.Cancel)
-                    ew.Result = downloader.DownloadWeather();
-            };
-
-            bgDwonloader.RunWorkerCompleted += (s, ec) =>
-            {
-                var response = (WeahterResponse)ec.Result;
-
-                if (!ec.Cancelled && response != null && response.Success && response.Data != null)
-                {
-                    WeatherViewData = new ObservableCollection<WeatherViewItem>(
-                        response.Data.Weather.Select(w => new WeatherViewItem(w)));
-
-                    WeatherTreeData = new ObservableCollection<WeatherTreeItem>()
-                    {
-                        response.Data.ToWeatherTreeItem()
-                    };
-                }
-                else
-                {
-                    WeatherViewData = null;
-                    WeatherTreeData = null;
-                }
-
-                awaitMessage.Close();
-            };
+            var bgDwonloader = DataController.DownloadWeatherAsync("Katowice", false, (s, ec) => { awaitMessage.Close(); });
 
             InternalMessagesExContainer.ShowMessage(awaitMessage);
             bgDwonloader.RunWorkerAsync();
@@ -1193,42 +1138,67 @@ namespace ArudinoConnect.Windows
         /// <param name="e"> Routed event arguments. </param>
         private void UploadWeatherButtonEx_Click(object sender, RoutedEventArgs e)
         {
-            if (WeatherViewData != null && WeatherViewData.Any())
+            var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer,
+                "Uploading weather", "Uploading weather data to Arduino...", PackIconKind.WeatherSunny);
+
+            awaitMessage.KeepFinishedOpen = true;
+
+            ProgressChangedEventHandler onProgress = (s, ep) =>
             {
-                List<ConfigCommandCarrier> commands = new List<ConfigCommandCarrier>
-                {
-                    new ConfigCommandCarrier()
+                string progressMessage = (string)ep.UserState;
+
+                if (progressMessage != null)
+                    awaitMessage.Message = progressMessage;
+            };
+
+            RunWorkerCompletedEventHandler onComplete = (s, ec) =>
+            {
+                var result = ec.Result as List<ConfigCommandResult>;
+                string resultMessage = string.Empty;
+
+                if (ec.Cancelled)
+                    resultMessage = "Configuration updating process has been cancelled.";
+
+                else if (result != null && result.Any())
+                    foreach (var singleResult in result)
                     {
-                        Command = $"/weather clear",
-                        CompleteMessage = $"Weather cleared.",
-                        FailMessage = $"Failed to clear message.",
-                        Message = $"Uploading weather data to Arduino..."
+                        if (singleResult.Result.Success && singleResult.Result.Data.StartsWith("OK"))
+                            resultMessage += $"{singleResult.CompleteMessage}{Environment.NewLine}";
+                        else
+                            resultMessage += $"{singleResult.FailMessage}{Environment.NewLine}";
                     }
-                };
 
-                foreach (var weatherData in WeatherViewData)
-                {
-                    string dateTime = weatherData.Date.Replace("-", ".");
+                else
+                    resultMessage = "Configuration cannot be updated. Please check configuration.";
 
-                    List<int> codes = weatherData.HourlyWeather
-                        .Select(w => WeatherDataMappers.MapWeatherCodeToArduinoCode(w.WeatherCode))
-                        .ToList();
+                awaitMessage.Message = resultMessage;
+                awaitMessage.InvokeFinsh();
+            };
 
-                    commands.Add(new ConfigCommandCarrier()
-                    {
-                        Command = $"/weather add {dateTime} {codes.Count},{string.Join(",", codes)}",
-                        CompleteMessage = $"Added weather for {dateTime}.",
-                        FailMessage = $"Weather for {dateTime} cannot be added. Please check data.",
-                        Message = $"Uploading weather for {dateTime}",
-                    });
-                }
-
-                if (commands.Count > 1)
-                    UploadConfiguration(commands, "Uploading weather", "Uploading weather data to Arduino...", PackIconKind.WeatherSunny);
-            }
+            InternalMessagesExContainer.ShowMessage(awaitMessage);
+            DataController.UploadWeatherAsync(true, onProgress, onComplete);
         }
 
         #endregion WEATHER METHODS
 
+        #region WINDOW METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after closing window. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Event arguments. </param>
+        private void Window_Closing(object sender, CancelEventArgs e)
+        {
+            if (DataController.SerialPortConnection != null && DataController.SerialPortConnection.IsConnected)
+                DataController.SerialPortConnection.Disconnect();
+
+            if (_timeUpdater.IsBusy)
+                _timeUpdater.CancelAsync();
+
+            _dataController.Dispose();
+            TrayIcon.Dispose();
+        }
+
+        #endregion WINDOW METHODS
     }
 }
