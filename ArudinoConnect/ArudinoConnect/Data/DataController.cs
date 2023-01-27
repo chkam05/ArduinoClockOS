@@ -27,11 +27,6 @@ namespace ArudinoConnect.Data
         private static DataController _instance;
         private SerialPortConnection _serialPortConnection;
 
-        private DispatcherTimer _weatherBgAutoSync;
-        private DateTime _weatherAutoSyncLastUpdate = DateTime.MinValue;
-        private long _weatherAutoSyncUpdateInterval = 86400;
-
-        private bool _weatherAutoSync = false;
         private WeatherData _weatherData;
         private ObservableCollection<WeatherHourViewItem> _weatherCurrentDayData;
         private ObservableCollection<WeatherTreeItem> _weatherTreeData;
@@ -58,22 +53,6 @@ namespace ArudinoConnect.Data
             {
                 _serialPortConnection = value;
                 OnPropertyChanged(nameof(SerialPortConnection));
-            }
-        }
-
-        public bool WeatherAutoSync
-        {
-            get => _weatherAutoSync;
-            set
-            {
-                _weatherAutoSync = value && SerialPortConnection.IsConnected;
-
-                if (_weatherAutoSync)
-                    RunWeatherAutoSync();
-                else
-                    StopWeatherAutoSync();
-
-                OnPropertyChanged(nameof(WeatherAutoSync));
             }
         }
 
@@ -139,7 +118,7 @@ namespace ArudinoConnect.Data
         /// <summary> Destroying object - disposing objects. </summary>
         public void Dispose()
         {
-            StopWeatherAutoSync();
+            //
         }
 
         #endregion CLASS METHODS
@@ -269,76 +248,6 @@ namespace ArudinoConnect.Data
         }
 
         #endregion WEATHER DATA MANAGEMENT
-
-        #region WEATHER BACKGROUND AUTO SYNCHRONISER
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Check if weather auto synchroniser is working. </summary>
-        /// <returns> True - wehater auto synchroniser is working; False - otherwise. </returns>
-        private bool IsWeatherAutoSyncRunning()
-        {
-            return _weatherBgAutoSync != null
-                && _weatherBgAutoSync.IsEnabled;
-        }
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Run weather auto synchroniser. </summary>
-        private void RunWeatherAutoSync()
-        {
-            StopWeatherAutoSync();
-
-            _weatherAutoSyncLastUpdate = DateTime.MinValue;
-
-            if (_weatherBgAutoSync == null)
-                _weatherBgAutoSync = new DispatcherTimer();
-
-            _weatherBgAutoSync.Tick += WeatherAutoSync_Tick;
-            _weatherBgAutoSync.Interval = new TimeSpan(1, 0, 0);
-            _weatherBgAutoSync.Start();
-        }
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Weather auto syncrhoniser work method. </summary>
-        /// <param name="sender"> Object from which method has been invoked. </param>
-        /// <param name="e"> Event arguments. </param>
-        private void WeatherAutoSync_Tick(object sender, EventArgs e)
-        {
-            if (!_weatherAutoSync)
-            {
-                StopWeatherAutoSync();
-                return;
-            }
-
-            else if (!SerialPortConnection.IsConnected)
-            {
-                WeatherAutoSync = false;
-                StopWeatherAutoSync();
-                return;
-            }
-
-            else if (DateTime.Now.Date >= _weatherAutoSyncLastUpdate)
-            {
-                _weatherAutoSyncLastUpdate = DateTime.Now
-                    .AddSeconds(_weatherAutoSyncUpdateInterval);
-
-                DownloadWeatherAsync("Katowice", true, (s,ec) =>
-                {
-                    var response = (WeahterResponse)ec.Result;
-                    if (!ec.Cancelled && response != null && response.Success && response.Data != null)
-                        UploadWeatherAsync();
-                });
-            }
-        }
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Stop weather auto synchroniser. </summary>
-        private void StopWeatherAutoSync()
-        {
-            if (IsWeatherAutoSyncRunning())
-                _weatherBgAutoSync.Stop();
-        }
-
-        #endregion WEATHER BACKGROUND AUTO SYNCHRONISER
 
     }
 }

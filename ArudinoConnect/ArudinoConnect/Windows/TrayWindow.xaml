@@ -82,18 +82,6 @@
 
                     </controlsex:ListViewEx>
 
-                    <Border
-                        Background="Black"
-                        Height="1"
-                        Margin="0,4"/>
-
-                    <controlsex:CheckBoxEx
-                        Content="Auto sync weather."
-                        CheckBoxStyle="Bordered"
-                        CheckMarkHeight="24"
-                        CheckMarkWidth="24"
-                        IsChecked="{Binding DataController.WeatherAutoSync}"/>
-
                 </StackPanel>
 
             </controlsex:ScrollViewerEx>

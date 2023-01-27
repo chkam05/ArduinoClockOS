@@ -20,6 +20,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Markup;
+using static chkam05.Tools.ControlsEx.Events.Delegates;
 
 namespace ArudinoConnect.Windows
 {
@@ -977,7 +978,16 @@ namespace ArudinoConnect.Windows
                 string tail = !e.Message.EndsWith(Environment.NewLine) ? Environment.NewLine : string.Empty;
                 Console += $"{e.Message}{tail}";
                 consoleTextBoxEx.ScrollToEnd();
+
+                RequestProcess(e.Message);
             }
+        }
+
+        //  --------------------------------------------------------------------------------
+        private void RequestProcess(string message)
+        {
+            if (message.StartsWith("/get weather"))
+                UpdateWeatherRequestProcess();
         }
 
         #endregion MESSAGING METHODS
@@ -1177,6 +1187,80 @@ namespace ArudinoConnect.Windows
 
             InternalMessagesExContainer.ShowMessage(awaitMessage);
             DataController.UploadWeatherAsync(true, onProgress, onComplete);
+        }
+
+        //  --------------------------------------------------------------------------------
+        private void UpdateWeatherRequestProcess()
+        {
+            var awaitMessage = new AwaitInternalMessageEx(InternalMessagesExContainer,
+                "Weather", "Downloading weather...", PackIconKind.WeatherSunny);
+
+            awaitMessage.AllowCancel = true;
+            awaitMessage.KeepFinishedOpen = true;
+
+            ProgressChangedEventHandler onUploadProgress = (s, ep) =>
+            {
+                string progressMessage = (string)ep.UserState;
+
+                if (progressMessage != null)
+                    awaitMessage.Message = progressMessage;
+            };
+
+            RunWorkerCompletedEventHandler onUploadComplete = (s, ec) =>
+            {
+                var result = ec.Result as List<ConfigCommandResult>;
+                string resultMessage = string.Empty;
+
+                if (ec.Cancelled)
+                    resultMessage = "Weather uploading process has been cancelled.";
+
+                else if (result != null && result.Any())
+                    foreach (var singleResult in result)
+                    {
+                        if (singleResult.Result.Success && singleResult.Result.Data.StartsWith("OK"))
+                            resultMessage += $"{singleResult.CompleteMessage}{Environment.NewLine}";
+                        else
+                            resultMessage += $"{singleResult.FailMessage}{Environment.NewLine}";
+                    }
+
+                else
+                    resultMessage = "Configuration cannot be updated. Please check configuration.";
+
+                awaitMessage.Message = resultMessage;
+                awaitMessage.InvokeFinsh();
+            };
+
+            var bgUploader = DataController.UploadWeatherAsync(false, onUploadProgress, onUploadComplete);
+
+            RunWorkerCompletedEventHandler onDownloadComplete = (s, ec) =>
+            {
+                if (ec.Cancelled)
+                {
+                    awaitMessage.Message = "Weather downloading process has been cancelled.";
+                    return;
+                };
+
+                awaitMessage.Title = "Uploading weather";
+                awaitMessage.Message = "Uploading weather data to Arduino...";
+
+                bgUploader.RunWorkerAsync();
+            };
+
+            var bgDwonloader = DataController.DownloadWeatherAsync("Katowice", false, onDownloadComplete);
+            
+            InternalMessageClose<InternalMessageCloseEventArgs> onIMClose = (s, e) =>
+            {
+                if (bgDwonloader != null && bgDwonloader.IsBusy)
+                    bgDwonloader.CancelAsync();
+
+                else if (bgUploader != null && bgUploader.IsBusy)
+                    bgUploader.CancelAsync();
+            };
+
+            awaitMessage.OnClose += onIMClose;
+
+            InternalMessagesExContainer.ShowMessage(awaitMessage);
+            bgDwonloader.RunWorkerAsync();
         }
 
         #endregion WEATHER METHODS
