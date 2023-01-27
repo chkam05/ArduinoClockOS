@@ -1,0 +1,120 @@
+﻿<Window
+    x:Class="ArudinoConnect.Windows.TrayWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:controlsex="clr-namespace:chkam05.Tools.ControlsEx;assembly=chkam05.Tools.ControlsEx"
+    xmlns:local="clr-namespace:ArudinoConnect.Windows"
+    mc:Ignorable="d"
+    
+    AllowsTransparency="True"
+    Background="Transparent"
+    BorderBrush="Transparent"
+    BorderThickness="0"
+    DataContext="{Binding RelativeSource={RelativeSource Self}}"
+    ShowInTaskbar="False"
+    Height="450"
+    Width="336"
+    WindowStyle="None"
+    Closing="Window_Closing"
+    MouseLeave="Window_MouseLeave">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="../Themes/WeatherTemplates.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+        </ResourceDictionary>
+    </Window.Resources>
+    
+    <Border
+        Background="#E0FFFFFF"
+        BorderBrush="DarkGray"
+        BorderThickness="1"
+        CornerRadius="8">
+
+        <Grid>
+
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <controlsex:ScrollViewerEx
+                Grid.Row="0"
+                Padding="8">
+
+                <StackPanel
+                    Orientation="Vertical">
+
+                    <TextBlock
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Text="Arduino Connect"/>
+
+                    <Border
+                        Background="Black"
+                        Height="1"
+                        Margin="0,4"/>
+
+                    <controlsex:ListViewEx
+                        BorderBrush="{x:Null}"
+                        BorderThickness="0"
+                        CornerRadius="0"
+                        Height="Auto"
+                        ItemsSource="{Binding DataController.WeatherCurrentDayData}"
+                        ItemTemplate="{StaticResource WeatherDataHourlyViewItemTemplate}"
+                        Margin="0,0,4,0"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Disabled"
+                        SelectionChanged="WeahterListViewEx_SelectionChanged">
+
+                        <controlsex:ListViewEx.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel
+                                    Margin="0"
+                                    Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </controlsex:ListViewEx.ItemsPanel>
+
+                    </controlsex:ListViewEx>
+
+                </StackPanel>
+
+            </controlsex:ScrollViewerEx>
+
+            <Border
+                Background="DarkGray"
+                CornerRadius="0,0,6,6"
+                Grid.Row="1"
+                Padding="8,4">
+
+                <StackPanel
+                    Orientation="Vertical">
+
+                    <controlsex:ButtonEx
+                        Content="Show application"
+                        IconKind="Application"
+                        Grid.Row="1"
+                        Margin="0,4"
+                        Click="ShowAppButtonEx_Click"/>
+
+                    <controlsex:ButtonEx
+                        Content="Close application"
+                        IconKind="ExitRun"
+                        Grid.Row="1"
+                        Margin="0,4"
+                        Click="CloseAppButtonEx_Click"/>
+
+                </StackPanel>
+
+            </Border>
+
+        </Grid>
+        
+    </Border>
+    
+</Window>

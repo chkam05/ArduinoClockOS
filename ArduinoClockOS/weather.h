@@ -27,20 +27,23 @@ class Weather
 {
     private:
         SdCardController  * sdcard_ctrl;
+        SerialController  * serial_ctrl;
 
         byte  * weather       = new byte[25] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
         int     year          = 2000;
         int     month         = 1;
         int     day           = 1;
         int     data_idx_pos  = 0;
+        bool    request_send  = false;
 
         int   CheckDateValidity(int *date_array);
         bool  IsCharacterADigit(char c);
+        bool  LoadFromFile();
         int   ParseData(String file_data, int *data_array, int data_size, int start_index = 0);
         void  UpdateDate(Time date_time);
 
     public:
-        Weather(SdCardController * sdcard_ctrl);
+        Weather(SdCardController * sdcard_ctrl, SerialController * serial_ctrl);
         
         void  ClearWeather();
         void  AddWeather(int year, int month, int day, int *data_array, int data_size, bool append = true);
@@ -70,15 +73,80 @@ int Weather::CheckDateValidity(int *date_array)
 }
 
 //  ----------------------------------------------------------------------------
-/* Sprawdzenie czy wprowadzony znak jest znakiem reprezentujacym liczbe.
- * @param c: Sprawdzany znak pod katem tego czy jest reprezentacja liczby.
- * @return: Informacja czy wprowadzony znak reprezentuje liczbe.
+/*  Sprawdzenie czy wprowadzony znak jest znakiem reprezentujacym liczbe.
+ *  @param c: Sprawdzany znak pod katem tego czy jest reprezentacja liczby.
+ *  @return: Informacja czy wprowadzony znak reprezentuje liczbe.
  */
 bool Weather::IsCharacterADigit(char c)
 {
     if (c >= 48 && c <=57)
         return true;
     return false;
+}
+
+//  ----------------------------------------------------------------------------
+/*  Zaladowanie danych prognozy pogody z pliku.
+ *  @return: True - dane zostaly zaladowane; False - w innym wypadku.
+ */
+bool Weather::LoadFromFile()
+{
+    bool result = false;
+
+    if (this->sdcard_ctrl->IsInitialized() && this->sdcard_ctrl->IsMounted() && this->sdcard_ctrl->FileExists(WEATHER_FILE_NAME))
+    {
+        File weather_file = this->sdcard_ctrl->OpenFileToRead(WEATHER_FILE_NAME);
+        bool stop_reading = false;
+
+        while (weather_file.available())
+        {
+            char character = ' ';
+            String line = "";
+            
+            if (stop_reading)
+                break;
+            
+            while (weather_file.available() && character != '\n')
+            {
+                character = weather_file.read();
+
+                if (character == '\t' || character == '\r')
+                    continue;
+
+                if (character != '\n')
+                    line += character;
+                else
+                    break;
+            }
+
+            line.toLowerCase();
+
+            int *date_array = new int[3] {0, 0, 0};
+            int last_step = this->ParseData(line, date_array, 3);
+
+            if (last_step == 3)
+            {
+                if (CheckDateValidity(date_array) == 0)
+                {
+                    int *weather_array = new int[25] { 0 };
+                    last_step = this->ParseData(line, weather_array, 25, this->data_idx_pos);
+
+                    if (last_step > 0 && last_step <= 25)
+                    {
+                        for (int i = 0; i < last_step; i++)
+                            weather[i] = weather_array[i];
+                        
+                        result = true;
+                        stop_reading = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        weather_file.close();
+    }
+
+    return result;
 }
 
 //  ----------------------------------------------------------------------------
@@ -139,9 +207,10 @@ void Weather::UpdateDate(Time date_time)
 /*  Konstruktor klasy kontrolera informacji pogodowych.
  *  @param sdcard_ctrl: Kontroler karty pamieci.
  */
-Weather::Weather(SdCardController * sdcard_ctrl)
+Weather::Weather(SdCardController * sdcard_ctrl, SerialController * serial_ctrl)
 {
     this->sdcard_ctrl = sdcard_ctrl;
+    this->serial_ctrl = serial_ctrl;
 }
 
 //  ----------------------------------------------------------------------------
@@ -152,6 +221,7 @@ void Weather::ClearWeather()
         this->sdcard_ctrl->RemoveFile(WEATHER_FILE_NAME);
     
     this->weather[0] = 0;
+    this->request_send = false;
 }
 
 //  ----------------------------------------------------------------------------
@@ -186,7 +256,9 @@ void Weather::AddWeather(int year, int month, int day, int *data_array, int data
 
             weather_file.println(date + " " + data);
             weather_file.close();
-        }      
+        }
+
+        this->request_send = false;
     }
 }
 
@@ -197,61 +269,18 @@ void Weather::AddWeather(int year, int month, int day, int *data_array, int data
  */
 int Weather::GetWeather(Time date_time)
 {
+    if (this->request_send)
+        return 0;
+    
     if (date_time.year > this->year || date_time.mon > this->month || date_time.date > this->day || this->weather[0] == 0)
     {
         this->UpdateDate(date_time);
         
-        if (this->sdcard_ctrl->IsInitialized() && this->sdcard_ctrl->IsMounted() && this->sdcard_ctrl->FileExists(WEATHER_FILE_NAME))
+        if (!this->LoadFromFile())
         {
-            File weather_file = this->sdcard_ctrl->OpenFileToRead(WEATHER_FILE_NAME);
-            bool stop_reading = false;
-
-            while (weather_file.available())
-            {
-                char character = ' ';
-                String line = "";
-                
-                if (stop_reading)
-                    break;
-                
-                while (weather_file.available() && character != '\n')
-                {
-                    character = weather_file.read();
-
-                    if (character == '\t' || character == '\r')
-                        continue;
-
-                    if (character != '\n')
-                        line += character;
-                    else
-                        break;
-                }
-
-                line.toLowerCase();
-
-                int *date_array = new int[3] {0, 0, 0};
-                int last_step = this->ParseData(line, date_array, 3);
-
-                if (last_step == 3)
-                {
-                    if (CheckDateValidity(date_array) == 0)
-                    {
-                        int *weather_array = new int[25] { 0 };
-                        last_step = this->ParseData(line, weather_array, 25, this->data_idx_pos);
-
-                        if (last_step > 0 && last_step <= 25)
-                        {
-                            for (int i = 0; i < last_step; i++)
-                                weather[i] = weather_array[i];
-                            
-                            stop_reading = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            weather_file.close();
+            this->weather[0] = 0;
+            this->serial_ctrl->WriteRawData("/get weather", SERIAL_COM);
+            this->request_send = true;
         }
     }
 

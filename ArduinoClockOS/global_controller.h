@@ -376,7 +376,7 @@ void GlobalController::InitializeAlarm()
 //  Inicjalizacja komponentu prognozy pogody.
 void GlobalController::InitializeWeather()
 {
-    this->weather = new Weather(this->sdcard_ctrl);
+    this->weather = new Weather(this->sdcard_ctrl, this->serial_ctrl);
 }
 
 //  ----------------------------------------------------------------------------
