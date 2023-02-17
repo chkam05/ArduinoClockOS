@@ -82,6 +82,16 @@
 
                     </controlsex:ListViewEx>
 
+                    <controlsex:ButtonEx
+                        x:Name="WeatherRefreshButtonEx"
+                        Content="Refresh"
+                        IconKind="Refresh"
+                        IconHeight="16"
+                        IconWidth="16"
+                        HorizontalAlignment="Left"
+                        Margin="0,4"
+                        Click="WeatherRefreshButtonEx_Click"/>
+
                 </StackPanel>
 
             </controlsex:ScrollViewerEx>

@@ -118,6 +118,36 @@ namespace ArudinoConnect.Windows
 
         #endregion NOTIFY PROPERTIES CHANGED INTERFACE METHODS
 
+        #region WEATHER INTERACTION METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on WeatherRefresh button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed event arguments. </param>
+        private void WeatherRefreshButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            var mainWindow = (MainWindow)((App)Application.Current).MainWindow;
+            var imContainer = mainWindow?.InternalMessagesExContainer;
+
+            var awaitMessage = new AwaitInternalMessageEx(
+                    imContainer, "Weather", "Downloading weather...", PackIconKind.WeatherSunny);
+
+            awaitMessage.AllowCancel = true;
+            awaitMessage.KeepFinishedOpen = false;
+
+            var bgDwonloader = DataController.DownloadWeatherAsync("Katowice", false, (s, ec) =>
+            {
+                awaitMessage.Close();
+                WeatherRefreshButtonEx.IsEnabled = true;
+            });
+
+            WeatherRefreshButtonEx.IsEnabled = false;
+            imContainer.ShowMessage(awaitMessage);
+            bgDwonloader.RunWorkerAsync();
+        }
+
+        #endregion WEATHER INTERACTION METHODS
+
         #region WINDOW METHODS
 
         //  --------------------------------------------------------------------------------

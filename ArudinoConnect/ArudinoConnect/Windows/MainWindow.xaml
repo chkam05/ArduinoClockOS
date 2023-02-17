@@ -9,6 +9,9 @@
     xmlns:im="clr-namespace:chkam05.Tools.ControlsEx.InternalMessages;assembly=chkam05.Tools.ControlsEx"
     xmlns:local="clr-namespace:ArudinoConnect.Windows"
     xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+    xmlns:statics="clr-namespace:ArudinoConnect.Static"
+    xmlns:sys="clr-namespace:System;assembly=mscorlib"
+    xmlns:tempSel="clr-namespace:ArudinoConnect.Themes.TemplateSelectors"
     mc:Ignorable="d"
     
     DataContext="{Binding RelativeSource={RelativeSource Self}}"
@@ -16,7 +19,8 @@
     Title="Arduino Connect"
     Height="500"
     Width="900"
-    Closing="Window_Closing">
+    Closing="Window_Closing"
+    PreviewKeyDown="Window_PreviewKeyDown">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -25,9 +29,35 @@
                 <ResourceDictionary Source="../Themes/WeatherTemplates.xaml"/>
             </ResourceDictionary.MergedDictionaries>
             
+            <!-- CONST -->
+            <Color x:Key="Colors.Red">Red</Color>
+            <Color x:Key="Colors.Rust">#DA3B01</Color>
+            <Color x:Key="Colors.Orange">#F7630C</Color>
+            <Color x:Key="Colors.Gold">#FF8C00</Color>
+            <Color x:Key="Colors.Yellow">Yellow</Color>
+            <Color x:Key="Colors.Green">Green</Color>
+            <Color x:Key="Colors.Mint">#10893E</Color>
+            <Color x:Key="Colors.Aqua">#00B7C3</Color>
+            <Color x:Key="Colors.BrightBlue">#0099BC</Color>
+            <Color x:Key="Colors.Turquoise">#0078D4</Color>
+            <Color x:Key="Colors.Blue">Blue</Color>
+            <Color x:Key="Colors.Violet">#881798</Color>
+            <Color x:Key="Colors.Orchid">#9A0089</Color>
+            <Color x:Key="Colors.Plum">#BF0077</Color>
+            <Color x:Key="Colors.Pink">#E3008C</Color>
+            <Color x:Key="Colors.White">White</Color>
+            <sys:Int32 x:Key="HoverLight">60</sys:Int32>
+            <sys:Int32 x:Key="PressLight">36</sys:Int32>
+
+            <ObjectDataProvider x:Key="EmptyObjectDataProvider" ObjectType="{x:Type sys:Object}"/>
+
             <!-- CONVERTERS -->
             <conv:BoolInversionConverter x:Key="BoolInversionConverter"/>
+            <conv:ButtonInteractionColorConverter x:Key="ButtonInteractionColorConverter"/>
+            <conv:ColorSolidBrushConverter x:Key="ColorSolidBrushConverter"/>
             <conv:HourBeepTupleConverter x:Key="HourBeepTupleConverter"/>
+            <conv:IntToStr x:Key="IntToStr"/>
+            <conv:NullToBool x:Key="NullToBool"/>
             <conv:SerialPortStateStringConverter x:Key="SerialPortStateStringConverter"/>
 
             <!-- DATA TEMPLATES -->
@@ -40,6 +70,78 @@
                 <TextBlock
                     Text="{Binding Converter={StaticResource HourBeepTupleConverter}, Mode=OneWay}"/>
             </DataTemplate>
+
+            <DataTemplate x:Key="PianoNoteDataTemplate">
+                <StackPanel
+                    Orientation="Horizontal">
+
+                    <materialDesign:PackIcon
+                        Height="16"
+                        Kind="MusicNote"
+                        Width="16"/>
+
+                    <TextBlock
+                        Text="{Binding Note}"
+                        VerticalAlignment="Center"/>
+
+                    <TextBlock
+                        Margin="8,0,0,0"
+                        Text="{Binding Duration}"
+                        VerticalAlignment="Center"/>
+
+                </StackPanel>
+            </DataTemplate>
+
+            <!-- STYLES -->
+            <Style x:Key="LedControlButtonExStyle" TargetType="{x:Type controlsex:ButtonEx}">
+                <Setter Property="ContentSide" Value="Bottom"/>
+                <Setter Property="CornerRadius" Value="48"/>
+                <Setter Property="Height" Value="80"/>
+                <Setter Property="IconHeight" Value="24"/>
+                <Setter Property="IconWidth" Value="24"/>
+                <Setter Property="Margin" Value="2"/>
+                <Setter Property="Width" Value="80"/>
+            </Style>
+
+            <Style x:Key="LedButtonTextBlockStyle" TargetType="{x:Type TextBlock}">
+                <Setter Property="FontWeight" Value="SemiBold"/>
+                <Setter Property="Margin" Value="-32,0,-32,-8"/>
+                <Setter Property="Padding" Value="0"/>
+                <Setter Property="TextAlignment" Value="Center"/>
+            </Style>
+
+            <Style x:Key="PianoBaseKeyExtBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="Wheat"/>
+                <Setter Property="BorderBrush" Value="Wheat"/>
+                <Setter Property="CornerRadius" Value="0,0,16,16"/>
+                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                <Setter Property="Grid.RowSpan" Value="2"/>
+                <Setter Property="Margin" Value="1,0"/>
+            </Style>
+
+            <Style x:Key="PianoUpperKeyExtBorderStyle" TargetType="Border">
+                <Setter Property="Background" Value="Black"/>
+                <Setter Property="BorderBrush" Value="Black"/>
+                <Setter Property="CornerRadius" Value="0,0,16,16"/>
+                <Setter Property="Grid.ColumnSpan" Value="2"/>
+                <Setter Property="Margin" Value="8,0,8,0"/>
+            </Style>
+
+            <Style x:Key="PianoItemListViewItemStyle" TargetType="{x:Type controlsex:ListViewItemEx}">
+                <Setter Property="BorderBrush" Value="#0078D7"/>
+                <Setter Property="BorderThickness" Value="1"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsBreak}" Value="True">
+                        <Setter Property="Background" Value="LightGray"/>
+                        <Setter Property="BorderBrush" Value="{x:Null}"/>
+                        <Setter Property="BorderThickness" Value="0"/>
+                        <Setter Property="MinHeight" Value="0"/>
+                        <Setter Property="Height" Value="1"/>
+                        <Setter Property="Margin" Value="0"/>
+                        <Setter Property="Width" Value="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType={x:Type WrapPanel}}}"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
 
         </ResourceDictionary>
     </Window.Resources>
@@ -78,7 +180,8 @@
                         Background="LightGray"
                         BorderBrush="DarkGray"
                         BorderThickness="0,0,0,1"
-                        Grid.Row="0">
+                        Grid.Row="0"
+                        MinHeight="35">
 
                         <Grid
                             Margin="4">
@@ -122,7 +225,8 @@
                         Background="LightGray"
                         BorderBrush="DarkGray"
                         BorderThickness="0,1,0,0"
-                        Grid.Row="2">
+                        Grid.Row="2"
+                        MinHeight="35">
 
                         <Grid
                             Margin="4">
@@ -133,6 +237,7 @@
                             </Grid.ColumnDefinitions>
 
                             <controlsex:TextBoxEx
+                                x:Name="MessageTextBoxEx"
                                 Background="White"
                                 IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
                                 Grid.Column="0"
@@ -143,6 +248,7 @@
                                 Text="{Binding ConsoleMessage}"/>
 
                             <controlsex:ButtonEx
+                                x:Name="SendMessageButtonEx"
                                 Grid.Column="1"
                                 Content="Send"
                                 IconHeight="12"
@@ -152,7 +258,948 @@
 
                         </Grid>
                     </Border>
+                    
                 </Grid>
+            </controlsex:TabItemEx>
+
+            <controlsex:TabItemEx
+                IconKind="LedVariantOn"
+                IconWidth="18"
+                Header="Lights">
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <controlsex:ScrollViewerEx
+                        Grid.Row="0">
+
+                        <WrapPanel
+                            Margin="4"
+                            Orientation="Horizontal">
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedOnButtonEx"
+                                        IconKind="LedVariantOn"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click">
+                                        <controlsex:ButtonEx.Content>
+                                            <TextBlock Style="{StaticResource LedButtonTextBlockStyle}">
+                                                <Run Text="Power"/>
+                                                <LineBreak/>
+                                                <Run Text="On"/>
+                                            </TextBlock>
+                                        </controlsex:ButtonEx.Content>
+                                    </controlsex:ButtonEx>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedOffButtonEx"
+                                        IconKind="LedVariantOff"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click">
+                                        <controlsex:ButtonEx.Content>
+                                            <TextBlock Style="{StaticResource LedButtonTextBlockStyle}">
+                                                <Run Text="Power"/>
+                                                <LineBreak/>
+                                                <Run Text="Off"/>
+                                            </TextBlock>
+                                        </controlsex:ButtonEx.Content>
+                                    </controlsex:ButtonEx>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedBrightnessPlusButtonEx"
+                                        IconKind="Plus"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click">
+                                        <controlsex:ButtonEx.Content>
+                                            <TextBlock Style="{StaticResource LedButtonTextBlockStyle}">
+                                                <Run Text="Brightness"/>
+                                                <LineBreak/>
+                                                <Run Text="Increase"/>
+                                            </TextBlock>
+                                        </controlsex:ButtonEx.Content>
+                                    </controlsex:ButtonEx>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedBrightnessMinusButtonEx"
+                                        IconKind="Minus"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click">
+                                        <controlsex:ButtonEx.Content>
+                                            <TextBlock Style="{StaticResource LedButtonTextBlockStyle}">
+                                                <Run Text="Brightness"/>
+                                                <LineBreak/>
+                                                <Run Text="Decrease"/>
+                                            </TextBlock>
+                                        </controlsex:ButtonEx.Content>
+                                    </controlsex:ButtonEx>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedFlashButtonEx"
+                                        Content="Flash"
+                                        IconKind="LedOn"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedStrobeButtonEx"
+                                        Content="Strobe"
+                                        IconKind="LedOn"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedFadeButtonEx"
+                                        Content="Fade"
+                                        IconKind="LedOn"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedSmoothButtonEx"
+                                        Content="Smooth"
+                                        IconKind="LedOn"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Separator Height="0" Width="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType={x:Type WrapPanel}}}"/>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedRedButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Red"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Red}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedRustButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Rust"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Rust}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedOrangeButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Orange"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Orange}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedGlodButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Gold"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Gold}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedYellowButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Yellow"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Yellow}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedGreenButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Green"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Green}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedMintButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Mint"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Mint}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedAquaButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Aqua"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Aqua}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedBrightBlueButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="BrightBlue"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.BrightBlue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedTurquoiseButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Turquoise"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Turquoise}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedBlueButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Blue"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Blue}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedVioletButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Violet"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Violet}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedOrchidButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Orchid"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Orchid}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedPlumButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Plum"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Plum}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedPinkButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        Content="Pink"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.Pink}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                            <Border
+                                BorderBrush="Black"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Margin="4"
+                                Padding="8">
+
+                                <StackPanel
+                                    Orientation="Horizontal">
+
+                                    <controlsex:ButtonEx
+                                        x:Name="LedWhiteButtonEx"
+                                        Background="{Binding Source={StaticResource Colors.White}, Converter={StaticResource ColorSolidBrushConverter}, Mode=OneWay}"
+                                        BorderBrush="Black"
+                                        Content="White"
+                                        IconKind="Color"
+                                        IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                        MouseOverBackground="{Binding Source={StaticResource Colors.White}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        MouseOverBorderBrush="{Binding Source={StaticResource Colors.White}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource HoverLight}, Mode=OneWay}"
+                                        PressedBackground="{Binding Source={StaticResource Colors.White}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        PressedBorderBrush="{Binding Source={StaticResource Colors.White}, Converter={StaticResource ButtonInteractionColorConverter}, ConverterParameter={StaticResource PressLight}, Mode=OneWay}"
+                                        Style="{StaticResource LedControlButtonExStyle}"
+                                        Click="LedButtonEx_Click"/>
+
+                                </StackPanel>
+
+                            </Border>
+
+                        </WrapPanel>
+
+                    </controlsex:ScrollViewerEx>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,1,0,0"
+                        Grid.Row="1"
+                        MinHeight="35">
+
+                    </Border>
+
+                </Grid>
+
+            </controlsex:TabItemEx>
+
+            <controlsex:TabItemEx
+                x:Name="PianoTabItemEx"
+                IconKind="Piano"
+                IconWidth="18"
+                Header="Piano">
+
+                <Grid>
+
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,0,0,1"
+                        Grid.Row="0"
+                        MinHeight="35">
+
+                        <Grid>
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Grid.Column="0"
+                                Margin="4"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Content="Open"
+                                    IconHeight="16"
+                                    IconKind="FolderOpen"
+                                    Margin="4,0,0,0"
+                                    Click="OpenSongButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Save As"
+                                    IconHeight="16"
+                                    IconKind="ContentSaveEdit"
+                                    Margin="4,0,0,0"
+                                    Click="SaveSongButtonEx_Click"/>
+
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Margin="4"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Content="Add Note"
+                                    IconHeight="16"
+                                    IconKind="Add"
+                                    Click="AddSongNoteButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Add Break"
+                                    IconHeight="16"
+                                    IconKind="SubdirectoryArrowLeft"
+                                    Margin="4,0,0,0"
+                                    Click="AddSongBreakNoteButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Add Pause"
+                                    IconHeight="16"
+                                    IconKind="Pause"
+                                    Margin="4,0,0,0"
+                                    Click="AddSongPauseNoteButtonEx_Click"/>
+
+                                <Border
+                                    Background="DarkGray"
+                                    BorderThickness="0"
+                                    Margin="8,0,8,0"
+                                    Width="1"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Remove"
+                                    IconHeight="16"
+                                    IconKind="Remove"
+                                    Click="RemoveSongNoteButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Clear"
+                                    IconHeight="16"
+                                    IconKind="DeleteOutline"
+                                    Margin="4,0,0,0"
+                                    Click="ClearSongButtonEx_Click"/>
+
+                                <Border
+                                    Background="DarkGray"
+                                    BorderThickness="0"
+                                    Margin="8,0,8,0"
+                                    Width="1"/>
+
+                                <TextBlock
+                                    TextAlignment="Center"
+                                    Text="Note"
+                                    VerticalAlignment="Center"/>
+
+                                <controlsex:ComboBoxEx
+                                    IsEnabled="{Binding SelectedNote, Converter={StaticResource NullToBool}, Mode=OneWay}"
+                                    ItemsSource="{x:Static statics:PianoNotes.Notes}"
+                                    Margin="8,0,0,0"
+                                    MinWidth="128"
+                                    SelectedItem="{Binding SelectedNote.Note}"/>
+
+                                <TextBlock
+                                    Margin="8,0,0,0"
+                                    TextAlignment="Center"
+                                    Text="Duration"
+                                    VerticalAlignment="Center"/>
+
+                                <controlsex:UpDownTextBoxEx
+                                    Background="White"
+                                    IsEnabled="{Binding SelectedNote, Converter={StaticResource NullToBool}, Mode=OneWay}"
+                                    Margin="8,0,0,0"
+                                    MinValue="0"
+                                    MaxValue="1000"
+                                    MinWidth="72"
+                                    Text="{Binding SelectedNote.Duration, Converter={StaticResource IntToStr}}"/>
+
+                            </StackPanel>
+                            
+                        </Grid>
+
+                    </Border>
+
+                    <controlsex:ListViewEx
+                        x:Name="PianoNotesListViewEx"
+                        AllowDrop="True"
+                        DragEnter="PianoNotesListViewEx_DragEnter"
+                        Drop="PianoNotesListViewEx_Drop"
+                        Grid.Row="1"
+                        ItemContainerStyle="{StaticResource PianoItemListViewItemStyle}"
+                        ItemsSource="{Binding Notes}"
+                        ItemTemplate="{StaticResource PianoNoteDataTemplate}"
+                        Padding="4"
+                        ScrollViewer.CanContentScroll="True"
+                        ScrollViewer.PanningMode="VerticalOnly"
+                        ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                        ScrollViewer.VerticalScrollBarVisibility="Visible"
+                        PreviewMouseDown="PianoNotesListViewEx_PreviewMouseDown"
+                        PreviewMouseMove="PianoNotesListViewEx_PreviewMouseMove"
+                        PreviewMouseUp="PianoNotesListViewEx_PreviewMouseUp"
+                        VerticalAlignment="Stretch">
+
+                        <controlsex:ListViewEx.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel
+                                    Orientation="Horizontal"/>
+                            </ItemsPanelTemplate>
+                        </controlsex:ListViewEx.ItemsPanel>
+                        
+                    </controlsex:ListViewEx>
+
+                    <Grid
+                        Background="Gray"
+                        Grid.Row="2"
+                        Height="160">
+
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="2*"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <Border
+                            x:Name="PianoKeyC1"
+                            Grid.Column="0"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD1"
+                            Grid.Column="2"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyC_1"
+                            Grid.Column="1"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyE1"
+                            Grid.Column="4"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD_1"
+                            Grid.Column="3"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyF1"
+                            Grid.Column="6"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyG1"
+                            Grid.Column="8"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyF_1"
+                            Grid.Column="7"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyA1"
+                            Grid.Column="10"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyG_1"
+                            Grid.Column="9"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyH1"
+                            Grid.Column="12"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyA_1"
+                            Grid.Column="11"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyC2"
+                            Grid.Column="14"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD2"
+                            Grid.Column="16"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyC_2"
+                            Grid.Column="15"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyE2"
+                            Grid.Column="18"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD_2"
+                            Grid.Column="17"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyF2"
+                            Grid.Column="20"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyG2"
+                            Grid.Column="22"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyF_2"
+                            Grid.Column="21"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyA2"
+                            Grid.Column="24"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyG_2"
+                            Grid.Column="23"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyH2"
+                            Grid.Column="26"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyA_2"
+                            Grid.Column="25"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyC3"
+                            Grid.Column="28"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD3"
+                            Grid.Column="30"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyC_3"
+                            Grid.Column="29"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyE3"
+                            Grid.Column="32"
+                            Style="{StaticResource PianoBaseKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                        <Border
+                            x:Name="PianoKeyD_3"
+                            Grid.Column="31"
+                            Style="{StaticResource PianoUpperKeyExtBorderStyle}"
+                            PreviewMouseDown="PianoKey_PreviewMouseDown"/>
+
+                    </Grid>
+
+                    <Border
+                        Background="LightGray"
+                        BorderBrush="DarkGray"
+                        BorderThickness="0,1,0,0"
+                        Grid.Row="3"
+                        MinHeight="35">
+
+                        <Grid
+                            Grid.Row="1"
+                            Margin="4">
+
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel
+                                Grid.Column="0"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Content="Play"
+                                    IconHeight="16"
+                                    IconKind="Play"
+                                    IsEnabled="{Binding AnyNote}"
+                                    Click="PlayPauseSongButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Record"
+                                    IconHeight="16"
+                                    IconKind="Record"
+                                    IsEnabled="{Binding PianoRecording, Converter={StaticResource BoolInversionConverter}, Mode=OneWay}"
+                                    Margin="4,0,0,0"
+                                    Click="RecordPauseSongButtonEx_Click"/>
+
+                                <controlsex:ButtonEx
+                                    Content="Stop"
+                                    IconHeight="16"
+                                    IconKind="Stop"
+                                    IsEnabled="{Binding PianoRecording, Mode=OneWay}"
+                                    Margin="4,0,0,0"
+                                    Click="StopRecordSongButtonEx_Click"/>
+
+                                <Border
+                                    Background="DarkGray"
+                                    BorderThickness="0"
+                                    Margin="8,0,8,0"
+                                    Width="1"/>
+
+                                <TextBlock
+                                    TextAlignment="Center"
+                                    VerticalAlignment="Center">
+                                    <Run Text="Notes"/>
+                                    <LineBreak/>
+                                    <TextBlock Text="Shift"/>
+                                </TextBlock>
+
+                                <controlsex:UpDownTextBoxEx
+                                    x:Name="PianoShiftUpDownTextBoxEx"
+                                    Background="White"
+                                    Margin="8,0,0,0"
+                                    MinValue="0"
+                                    MaxValue="1000"
+                                    MinWidth="72"
+                                    Text="{Binding PianoShift, Converter={StaticResource IntToStr}}"/>
+
+                                <TextBlock
+                                    Margin="8,0,0,0"
+                                    TextAlignment="Center"
+                                    Text="Duration"
+                                    VerticalAlignment="Center"/>
+
+                                <controlsex:UpDownTextBoxEx
+                                    x:Name="NoteDurationUpDownTextBoxEx"
+                                    Background="White"
+                                    Margin="8,0,0,0"
+                                    MinValue="0"
+                                    MaxValue="1000"
+                                    MinWidth="72"
+                                    Text="{Binding NoteDuration, Converter={StaticResource IntToStr}}"/>
+
+                            </StackPanel>
+
+                            <StackPanel
+                                Grid.Column="1"
+                                Orientation="Horizontal">
+
+                                <controlsex:ButtonEx
+                                    Content="Upload and play"
+                                    Grid.Column="1"
+                                    IsEnabled="{Binding DataController.SerialPortConnection.IsConnected}"
+                                    IconHeight="12"
+                                    IconKind="Play"
+                                    Click="UploadSongToArduinoButtonEx_Click"/>
+
+                            </StackPanel>
+
+                        </Grid>
+                    </Border>
+
+                </Grid>
+                
             </controlsex:TabItemEx>
 
             <controlsex:TabItemEx
@@ -219,7 +1266,8 @@
                         Background="LightGray"
                         BorderBrush="DarkGray"
                         BorderThickness="0,1,0,0"
-                        Grid.Row="1">
+                        Grid.Row="1"
+                        MinHeight="35">
 
                         <Grid
                             Grid.Row="1"
@@ -254,6 +1302,7 @@
 
                         </Grid>
                     </Border>
+                    
                 </Grid>
             </controlsex:TabItemEx>
 
@@ -620,7 +1669,8 @@
                         Background="LightGray"
                         BorderBrush="DarkGray"
                         BorderThickness="0,1,0,0"
-                        Grid.Row="1">
+                        Grid.Row="1"
+                        MinHeight="35">
 
                         <Grid
                             Grid.Row="1"
@@ -673,8 +1723,27 @@
 
             <Grid>
 
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
                 <StackPanel
-                    HorizontalAlignment="Right"
+                    Grid.Column="0"
+                    Margin="4"
+                    Orientation="Horizontal">
+
+                    <controlsex:ButtonEx
+                        IconHeight="16"
+                        IconMargin="0"
+                        IconKind="Bluetooth"
+                        Click="ConnectionBluetoothButtonEx_Click"/>
+
+                </StackPanel>
+
+                <StackPanel
+                    Grid.Column="2"
                     Margin="4"
                     Orientation="Horizontal">
 

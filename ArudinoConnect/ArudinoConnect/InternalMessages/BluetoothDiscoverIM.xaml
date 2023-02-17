@@ -1,0 +1,62 @@
+﻿<im:StandardInternalMessageEx
+    x:Class="ArudinoConnect.InternalMessages.BluetoothDiscoverIM"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+    xmlns:local="clr-namespace:ArudinoConnect.InternalMessages"
+    xmlns:controlsex="clr-namespace:chkam05.Tools.ControlsEx;assembly=chkam05.Tools.ControlsEx"
+    xmlns:im="clr-namespace:chkam05.Tools.ControlsEx.InternalMessages;assembly=chkam05.Tools.ControlsEx"
+    
+    mc:Ignorable="d" 
+    
+    d:DesignHeight="450"
+    d:DesignWidth="800"
+    DataContext="{Binding RelativeSource={RelativeSource Self}}">
+
+    <im:StandardInternalMessageEx.Resources>
+        <ResourceDictionary>
+
+            <!-- DATA TEMPLATES -->
+            <DataTemplate x:Key="DevicesDataTemplate">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock
+                        Grid.Column="0"
+                        Text="{Binding DeviceName}"/>
+
+                    <TextBlock
+                        Grid.Column="1"
+                        Margin="16,0,0,0"
+                        Text="{Binding DeviceId}"/>
+
+                </Grid>
+            </DataTemplate>
+            
+            <!-- STYLES -->
+            <Style x:Key="BtDevicesListViewItemExStyle" TargetType="controlsex:ListViewItemEx">
+                <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            </Style>
+
+        </ResourceDictionary>
+    </im:StandardInternalMessageEx.Resources>
+
+    <Grid
+        MaxHeight="256">
+
+        <controlsex:ListViewEx
+            ItemContainerStyle="{StaticResource BtDevicesListViewItemExStyle}"
+            ItemsSource="{Binding BTDiscovery.Devices}"
+            ItemTemplate="{StaticResource DevicesDataTemplate}"
+            ScrollViewer.CanContentScroll="True"
+            ScrollViewer.VerticalScrollBarVisibility="Visible"
+            SelectedItem="{Binding BTDiscovery.SelectedDevice}"
+            SelectionChanged="BtDevicesListViewEx_SelectionChanged"/>
+
+    </Grid>
+    
+</im:StandardInternalMessageEx>

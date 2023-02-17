@@ -25,6 +25,7 @@ namespace ArudinoConnect.Data
         //  VARIABLES
 
         private static DataController _instance;
+        private BluetoothConnection _bluetoothConnection;
         private SerialPortConnection _serialPortConnection;
 
         private WeatherData _weatherData;
@@ -43,6 +44,16 @@ namespace ArudinoConnect.Data
                     _instance = new DataController();
 
                 return _instance;
+            }
+        }
+
+        public BluetoothConnection BluetoothConnection
+        {
+            get => _bluetoothConnection;
+            set
+            {
+                _bluetoothConnection = value;
+                OnPropertyChanged(nameof(BluetoothConnection));
             }
         }
 
@@ -213,6 +224,15 @@ namespace ArudinoConnect.Data
                 {
                     new ConfigCommandCarrier()
                     {
+                        Command = $"/lock Updating...",
+                        CompleteMessage = "Service mode enabled.",
+                        FailMessage = "Failed to enable service mode.",
+                        Message = $"Enabling service lock...",
+                        RequiredResponse = "OK",
+                    },
+
+                    new ConfigCommandCarrier()
+                    {
                         Command = $"/weather clear",
                         CompleteMessage = $"Weather cleared.",
                         FailMessage = $"Failed to clear message.",
@@ -237,7 +257,16 @@ namespace ArudinoConnect.Data
                     });
                 }
 
-                if (commands.Count > 1)
+                commands.Add(new ConfigCommandCarrier()
+                {
+                    Command = $"/unlock",
+                    CompleteMessage = "Service mode disabled.",
+                    FailMessage = "Failed to disable service mode. Go to command line and type '/unlock', or restart device.",
+                    Message = $"Disabling service lock...",
+                    RequiredResponse = "OK",
+                });
+
+                if (commands.Count > 3)
                 {
                     var scm = new SerialCommander(SerialPortConnection);
                     return scm.UploadConfigurationAsync(commands, autoStart, false, progressChangedEvent, runWorkerCompletedEvent);

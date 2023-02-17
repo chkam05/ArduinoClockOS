@@ -1,5 +1,6 @@
 ﻿using ArudinoConnect.Data;
 using ArudinoConnect.Events;
+using ArudinoConnect.InternalMessages;
 using ArudinoConnect.Mappers;
 using ArudinoConnect.Static;
 using ArudinoConnect.Utilities;
@@ -8,6 +9,7 @@ using chkam05.Tools.ControlsEx.Data;
 using chkam05.Tools.ControlsEx.Events;
 using chkam05.Tools.ControlsEx.InternalMessages;
 using MaterialDesignThemes.Wpf;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -16,11 +18,18 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Threading;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Markup;
+using System.Windows.Media;
+using System.Windows.Media.Animation;
+using Windows.Foundation.Collections;
 using static chkam05.Tools.ControlsEx.Events.Delegates;
+using Border = System.Windows.Controls.Border;
+using Point = System.Windows.Point;
 
 namespace ArudinoConnect.Windows
 {
@@ -42,6 +51,77 @@ namespace ArudinoConnect.Windows
             { DayOfWeek.Sunday, 7 }
         };
 
+        private static readonly Dictionary<string, int> PianoButtonsMap = new Dictionary<string, int>()
+        {
+            { "PianoKeyC1", 1 },
+            { "PianoKeyC_1", 2 },
+            { "PianoKeyD1", 3 },
+            { "PianoKeyD_1", 4 },
+            { "PianoKeyE1", 5 },
+            { "PianoKeyF1", 6 },
+            { "PianoKeyF_1", 7 },
+            { "PianoKeyG1", 8 },
+            { "PianoKeyG_1", 9 },
+            { "PianoKeyA1", 10 },
+            { "PianoKeyA_1", 11 },
+            { "PianoKeyH1", 12 },
+            { "PianoKeyC2", 13 },
+            { "PianoKeyC_2", 14 },
+            { "PianoKeyD2", 15 },
+            { "PianoKeyD_2", 16 },
+            { "PianoKeyE2", 17 },
+            { "PianoKeyF2", 18 },
+            { "PianoKeyF_2", 19 },
+            { "PianoKeyG2", 20 },
+            { "PianoKeyG_2", 21 },
+            { "PianoKeyA2", 22 },
+            { "PianoKeyA_2", 23 },
+            { "PianoKeyH2", 24 },
+            { "PianoKeyC3", 25 },
+            { "PianoKeyC_3", 26 },
+            { "PianoKeyD3", 27 },
+            { "PianoKeyD_3", 28 },
+            { "PianoKeyE3", 29 },
+        };
+
+        private static readonly Dictionary<Key, int> PianoKeyMap = new Dictionary<Key, int>()
+        {
+            { Key.Z, 1 },
+            { Key.S, 2 },
+            { Key.X, 3 },
+            { Key.D, 4 },
+            { Key.C, 5 },
+            { Key.V, 6 },
+            { Key.G, 7 },
+            { Key.B, 8 },
+            { Key.H, 9 },
+            { Key.N, 10 },
+            { Key.J, 11 },
+            { Key.M, 12 },
+            { Key.OemComma , 13 },
+            { Key.L, 14 },
+            { Key.OemPeriod, 15 },
+            { Key.OemSemicolon, 16 },
+            { Key.OemQuestion, 17 },
+            { Key.Q , 13 },
+            { Key.D2, 14 },
+            { Key.W, 15 },
+            { Key.D3, 16 },
+            { Key.E, 17 },
+            { Key.R, 18 },
+            { Key.D5, 19 },
+            { Key.T, 20 },
+            { Key.D6, 21 },
+            { Key.Y, 22 },
+            { Key.D7, 23 },
+            { Key.U, 24 },
+            { Key.I, 25 },
+            { Key.D9, 26 },
+            { Key.O, 27 },
+            { Key.D0, 28 },
+            { Key.P, 29 },
+        };
+
 
         //  EVENTS
 
@@ -50,9 +130,16 @@ namespace ArudinoConnect.Windows
 
         //  VARIABLES
 
+        private Point _pianoNoteDragStartPoint;
+
         private DataController _dataController;
         private ObservableCollection<int> _baudRatesCollection;
         private ObservableCollection<ComPort> _devicesCollection;
+        private ObservableCollection<PianoNote> _notes;
+        private int _noteDuration = 12;
+        private PianoNote _selectedNote;
+        private bool _pianoRecording = false;
+        private int _pianoShift = 3;
         private int _baudRate;
         private ComPort _selectedDevice;
         private BackgroundWorker _timeUpdater;
@@ -110,6 +197,67 @@ namespace ArudinoConnect.Windows
                 _devicesCollection = value;
                 _devicesCollection.CollectionChanged += (s, e) => OnPropertyChanged(nameof(DevicesCollection));
                 OnPropertyChanged(nameof(DevicesCollection));
+            }
+        }
+
+        public ObservableCollection<PianoNote> Notes
+        {
+            get => _notes;
+            set
+            {
+                _notes = value;
+                _notes.CollectionChanged += (s, e) =>
+                {
+                    OnPropertyChanged(nameof(Notes));
+                    OnPropertyChanged(nameof(AnyNote));
+                };
+                OnPropertyChanged(nameof(Notes));
+                OnPropertyChanged(nameof(AnyNote));
+            }
+        }
+
+        public bool AnyNote
+        {
+            get => Notes?.Any() == true;
+        }
+
+        public int NoteDuration
+        {
+            get => _noteDuration;
+            set
+            {
+                _noteDuration = Math.Max(1, value);
+                OnPropertyChanged(nameof(NoteDuration));
+            }
+        }
+
+        public PianoNote SelectedNote
+        {
+            get => _selectedNote;
+            set
+            {
+                _selectedNote = value;
+                OnPropertyChanged(nameof(SelectedNote));
+            }
+        }
+
+        public bool PianoRecording
+        {
+            get => _pianoRecording;
+            set
+            {
+                _pianoRecording = value;
+                OnPropertyChanged(nameof(PianoRecording));
+            }
+        }
+
+        public int PianoShift
+        {
+            get => _pianoShift;
+            set
+            {
+                _pianoShift = Math.Min(6, Math.Max(0, value));
+                OnPropertyChanged(nameof(PianoShift));
             }
         }
 
@@ -328,6 +476,8 @@ namespace ArudinoConnect.Windows
             SetupDataCollections();
             InitializeComponent();
 
+            DataController.BluetoothConnection = new BluetoothConnection(InternalMessagesExContainer);
+
             TrayIcon = new System.Windows.Forms.NotifyIcon();
             TrayIcon.BalloonTipText = "Arduino Connect has been minimised. Click the tray icon to show.";
             TrayIcon.BalloonTipTitle = "Show Arduino Connect";
@@ -376,6 +526,44 @@ namespace ArudinoConnect.Windows
             }
         }
 
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on ConnectionBluetoothButtonEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed event arguments. </param>
+        private void ConnectionBluetoothButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            var btDiscoverIm = new BluetoothDiscoverIM(InternalMessagesExContainer);
+
+            btDiscoverIm.Title = "Bluetooth discovery";
+            btDiscoverIm.IconKind = PackIconKind.Bluetooth;
+            btDiscoverIm.Buttons = new InternalMessageButtons[] { InternalMessageButtons.OkButton, InternalMessageButtons.CancelButton };
+            btDiscoverIm.OnClose += OnBluetoothDeviceSelected;
+
+            InternalMessagesExContainer.ShowMessage(btDiscoverIm);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after selecting bluetooth device to connect. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Internal Message Close Event Arguments. </param>
+        private void OnBluetoothDeviceSelected(object sender, InternalMessageCloseEventArgs e)
+        {
+            if (e.Result == InternalMessageResult.Ok)
+            {
+                var btDiscovery = BluetoothDiscovery.Instance;
+
+                if (btDiscovery.SelectedDevice != null)
+                {
+                    if (DataController.BluetoothConnection == null)
+                        DataController.BluetoothConnection = new BluetoothConnection(InternalMessagesExContainer);
+
+                    var btConnection = DataController.BluetoothConnection;
+
+                    btConnection.Connect(btDiscovery.SelectedDevice);
+                }
+            }
+        }
+
         #endregion BASE INTERACTION METHODS
 
         #region CONFIGURATION METHODS
@@ -409,6 +597,14 @@ namespace ArudinoConnect.Windows
                 {
                     new ConfigCommandCarrier()
                     {
+                        Command = $"/lock Updating...",
+                        CompleteMessage = "Service mode enabled.",
+                        FailMessage = "Failed to enable service mode.",
+                        RequiredResponse = "OK",
+                    },
+
+                    new ConfigCommandCarrier()
+                    {
                         Command = $"/date set {DtDay}.{week}.{DtMonth}.{DtYear}",
                         CompleteMessage = "Date configuration updated.",
                         FailMessage = "Date configuration cannot be updated. Please check configuration.",
@@ -419,7 +615,15 @@ namespace ArudinoConnect.Windows
                         Command = $"/time set {DtHour}:{DtMinute}:{DtSecond}",
                         CompleteMessage = "Time configuration updated.",
                         FailMessage = "Time configuration cannot be updated. Please check configuration.",
-                    }
+                    },
+
+                    new ConfigCommandCarrier()
+                    {
+                        Command = $"/unlock",
+                        CompleteMessage = "Service mode disabled.",
+                        FailMessage = "Failed to disable service mode. Go to command line and type '/unlock', or restart device.",
+                        RequiredResponse = "OK",
+                    },
                 };
 
                 UploadConfiguration(data, title, message, icon);
@@ -499,6 +703,14 @@ namespace ArudinoConnect.Windows
             var message = "Updating configuration...";
             var icon = PackIconKind.Gear;
 
+            data.Add(new ConfigCommandCarrier()
+            {
+                Command = $"/lock Updating...",
+                CompleteMessage = "Service mode enabled.",
+                FailMessage = "Failed to enable service mode.",
+                RequiredResponse = "OK",
+            });
+
             if (DateTime.TryParseExact($"{DtYear}.{DtMonth}.{DtDay} {DtHour}:{DtMinute}:{DtSecond}", "yyyy.MM.dd HH:mm:ss",
                 CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime dt))
             {
@@ -540,6 +752,14 @@ namespace ArudinoConnect.Windows
                 FailMessage = "Beep hours configuration cannot be updated. Please check configuration.",
             });
 
+            data.Add(new ConfigCommandCarrier()
+            {
+                Command = $"/unlock",
+                CompleteMessage = "Service mode disabled.",
+                FailMessage = "Failed to disable service mode. Go to command line and type '/unlock', or restart device.",
+                RequiredResponse = "OK",
+            });
+
             if (data.Count > 0)
                 UploadConfiguration(data, title, message, icon);
         }
@@ -571,6 +791,14 @@ namespace ArudinoConnect.Windows
                     Command = "/init",
                     CompleteMessage = "Downloading date configuration...",
                     FailMessage = "Could not download configuration. Device is not yet initialized.",
+                    RequiredResponse = "YES",
+                },
+                new ConfigCommandCarrier()
+                {
+                    Command = $"/lock Downloading...",
+                    CompleteMessage = "Service mode enabled.",
+                    FailMessage = "Failed to enable service mode.",
+                    RequiredResponse = "OK",
                 },
                 new ConfigCommandCarrier()
                 {
@@ -599,9 +827,16 @@ namespace ArudinoConnect.Windows
                 new ConfigCommandCarrier()
                 {
                     Command = "/brightness get",
-                    CompleteMessage = "",
+                    CompleteMessage = "Unlocking device...",
                     FailMessage = "Downloading brightness configuration failed.",
-                }
+                },
+                new ConfigCommandCarrier()
+                {
+                    Command = $"/unlock",
+                    CompleteMessage = "Service mode disabled.",
+                    FailMessage = "Failed to disable service mode. Go to command line and type '/unlock', or restart device.",
+                    RequiredResponse = "OK",
+                },
             };
 
             bgDwonloader.DoWork += (s, ew) =>
@@ -616,7 +851,7 @@ namespace ArudinoConnect.Windows
                         break;
                     }
 
-                    var commandResult = ExecuteCommand(command.Command);
+                    var commandResult = ExecuteCommand(command.Command, command.RequiredResponse);
 
                     if (commandResult.Success)
                     {
@@ -648,7 +883,7 @@ namespace ArudinoConnect.Windows
                     {
                         switch (ep.ProgressPercentage)
                         {
-                            case 1:
+                            case 2:
                                 if (data.Result.Success)
                                 {
                                     var dateParts = data.Result.Data.Split('.');
@@ -659,7 +894,7 @@ namespace ArudinoConnect.Windows
                                 }
                                 break;
 
-                            case 2:
+                            case 3:
                                 if (data.Result.Success)
                                 {
                                     var dateParts = data.Result.Data.Split(':');
@@ -670,7 +905,7 @@ namespace ArudinoConnect.Windows
                                 }
                                 break;
 
-                            case 3:
+                            case 4:
                                 if (data.Result.Success)
                                 {
                                     var dateParts = data.Result.Data.Split(new string[] { ":", " " }, StringSplitOptions.RemoveEmptyEntries);
@@ -680,7 +915,7 @@ namespace ArudinoConnect.Windows
                                 }
                                 break;
 
-                            case 4:
+                            case 5:
                                 if (data.Result.Success)
                                 {
                                     var dataParts = data.Result.Data.ToLower();
@@ -693,7 +928,7 @@ namespace ArudinoConnect.Windows
                                 }
                                 break;
 
-                            case 5:
+                            case 6:
                                 if (data.Result.Success)
                                 {
                                     var dataParts = data.Result.Data.ToLower();
@@ -834,7 +1069,15 @@ namespace ArudinoConnect.Windows
         private void MessageTextBoxEx_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
+            {
+                var textBoxEx = (TextBoxEx)sender;
+
+                SendMessageButtonEx.Focus();
+
                 SendMessage();
+
+                MessageTextBoxEx.Focus();
+            }
         }
 
         #endregion CONSOLE INTERACTION METHODS
@@ -931,6 +1174,120 @@ namespace ArudinoConnect.Windows
 
         #endregion DATE & TIME CONTROL METHODS
 
+        #region LEDS CONTROL METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking on Led function ButtonEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed event arguments. </param>
+        private void LedButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            ButtonEx button = (ButtonEx)sender;
+
+            if (button == LedOnButtonEx)
+            {
+                SendMessage("/led on");
+            }
+            else if (button == LedOffButtonEx)
+            {
+                SendMessage("/led off");
+            }
+            else if (button == LedBrightnessPlusButtonEx)
+            {
+                SendMessage("/led +");
+            }
+            else if (button == LedBrightnessMinusButtonEx)
+            {
+                SendMessage("/led -");
+            }
+            else if (button == LedFlashButtonEx)
+            {
+                SendMessage("/led flash");
+            }
+            else if (button == LedStrobeButtonEx)
+            {
+                SendMessage("/led strobe");
+            }
+            else if (button == LedFadeButtonEx)
+            {
+                SendMessage("/led fade");
+            }
+            else if (button == LedSmoothButtonEx)
+            {
+                SendMessage("/led smooth");
+            }
+            else if (button == LedRedButtonEx)
+            {
+                SendMessage("/led r 0");
+            }
+            else if (button == LedRustButtonEx)
+            {
+                SendMessage("/led r 1");
+            }
+            else if (button == LedOrangeButtonEx)
+            {
+                SendMessage("/led r 2");
+            }
+            else if (button == LedGlodButtonEx)
+            {
+                SendMessage("/led r 3");
+            }
+            else if (button == LedYellowButtonEx)
+            {
+                SendMessage("/led r 4");
+            }
+            else if (button == LedGreenButtonEx)
+            {
+                SendMessage("/led g 0");
+            }
+            else if (button == LedMintButtonEx)
+            {
+                SendMessage("/led g 1");
+            }
+            else if (button == LedAquaButtonEx)
+            {
+                SendMessage("/led g 2");
+            }
+            else if (button == LedBrightBlueButtonEx)
+            {
+                SendMessage("/led g 3");
+            }
+            else if (button == LedTurquoiseButtonEx)
+            {
+                SendMessage("/led g 4");
+            }
+            else if (button == LedBlueButtonEx)
+            {
+                SendMessage("/led b 0");
+            }
+            else if (button == LedVioletButtonEx)
+            {
+                SendMessage("/led b 1");
+            }
+            else if (button == LedOrchidButtonEx)
+            {
+                SendMessage("/led b 2");
+            }
+            else if (button == LedPlumButtonEx)
+            {
+                SendMessage("/led b 3");
+            }
+            else if (button == LedPinkButtonEx)
+            {
+                SendMessage("/led b 4");
+            }
+            else if (button == LedWhiteButtonEx)
+            {
+                SendMessage("/led w");
+            }
+            else
+            {
+                //
+            }
+        }
+
+        #endregion LEDS CONTROL METHODS
+
         #region MESSAGING METHODS
 
         //  --------------------------------------------------------------------------------
@@ -966,6 +1323,18 @@ namespace ArudinoConnect.Windows
                 DataController.SerialPortConnection.SendMessage(ConsoleMessage);
                 consoleTextBoxEx.ScrollToEnd();
                 ConsoleMessage = string.Empty;
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Send message to serial port device. </summary>
+        /// <param name="message"> Message to send. </param>
+        private void SendMessage(string message)
+        {
+            if (!string.IsNullOrEmpty(message) && DataController.SerialPortConnection?.IsConnected == true)
+            {
+                DataController.SerialPortConnection.SendMessage(message);
+                consoleTextBoxEx.ScrollToEnd();
             }
         }
 
@@ -1007,6 +1376,476 @@ namespace ArudinoConnect.Windows
 
         #endregion NOTIFY PROPERTIES CHANGED INTERFACE METHODS
 
+        #region PIANO METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after pressing </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Mousr Button Event Arguments. </param>
+        private void PianoKey_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            Border border = sender as Border;
+
+            if (border != null)
+            {
+                if (PianoButtonsMap.TryGetValue(border.Name, out int keyIndex))
+                {
+                    var keyName = PianoNotes.GetNote(keyIndex, PianoShift);
+                    UInt16 tone = Convert.ToUInt16(PianoNotes.GetNoteValue(keyName));
+                    int duration = CalculateNoteDuration(NoteDuration);
+
+                    PlayTone(tone, duration);
+
+                    if (PianoRecording)
+                    {
+                        var newNote = new PianoNote(keyName, NoteDuration);
+                        Notes.Add(newNote);
+                        SelectedNote = newNote;
+                    }
+                }
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Play piano tone. </summary>
+        /// <param name="frequency"> Tone frequency. </param>
+        /// <param name="msDuration"> Tone duration. </param>
+        /// <param name="volume"> Tone volume. </param>
+        public static void PlayTone(UInt16 frequency, int msDuration, UInt16 volume = 16383)
+        {
+            using (var mStrm = new MemoryStream())
+            {
+                using (var writer = new BinaryWriter(mStrm))
+                {
+                    const double tau = 2 * Math.PI;
+                    const int formatChunkSize = 16;
+                    const int headerSize = 8;
+                    const short formatType = 1;
+                    const short tracks = 1;
+                    const int samplesPerSecond = 44100;
+                    const short bitsPerSample = 16;
+                    const short frameSize = (short)(tracks * ((bitsPerSample + 7) / 8));
+                    const int bytesPerSecond = samplesPerSecond * frameSize;
+                    const int waveSize = 4;
+                    var samples = (int)((decimal)samplesPerSecond * msDuration / 1000);
+                    int dataChunkSize = samples * frameSize;
+                    int fileSize = waveSize + headerSize + formatChunkSize + headerSize + dataChunkSize;
+
+                    writer.Write(0x46464952);
+                    writer.Write(fileSize);
+                    writer.Write(0x45564157);
+                    writer.Write(0x20746D66);
+                    writer.Write(formatChunkSize);
+                    writer.Write(formatType);
+                    writer.Write(tracks);
+                    writer.Write(samplesPerSecond);
+                    writer.Write(bytesPerSecond);
+                    writer.Write(frameSize);
+                    writer.Write(bitsPerSample);
+                    writer.Write(0x61746164);
+                    writer.Write(dataChunkSize);
+
+                    double theta = frequency * tau / samplesPerSecond;
+                    double amp = volume >> 2;
+                    for (int step = 0; step < samples; step++)
+                    {
+                        writer.Write((short)(amp * Math.Sin(theta * step)));
+                    }
+
+                    mStrm.Seek(0, SeekOrigin.Begin);
+                    using (var player = new System.Media.SoundPlayer(mStrm))
+                    {
+                        player.PlaySync();
+                    }
+                }
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking OpenSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void OpenSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            PianoRecording = false;
+            
+            var imOpenFile = FilesSelectorInternalMessageEx.CreateOpenFileInternalMessageEx(
+                InternalMessagesExContainer, "Open Arduino Song File", PackIconKind.MusicNote);
+
+            imOpenFile.InitialDirectory = Environment.GetEnvironmentVariable("USERPROFILE");
+            imOpenFile.MultipleFiles = false;
+            imOpenFile.FilesTypes = new ObservableCollection<InternalMessageFileType>()
+            {
+                new InternalMessageFileType("Arduino Midi Song", new string[] { "*.ams" }),
+                new InternalMessageFileType("All Files", new string[] { "*.*" }),
+            };
+
+            imOpenFile.OnClose += (s, fe) =>
+            {
+                if (fe.Result == InternalMessageResult.Ok && File.Exists(fe.FilePath))
+                 {
+                    var notesData = File.ReadAllText(fe.FilePath);
+                    var deserializedData = JsonConvert.DeserializeObject<List<PianoNote>>(notesData);
+                    Notes = new ObservableCollection<PianoNote>(deserializedData);
+                }
+            };
+
+            InternalMessagesExContainer.ShowMessage(imOpenFile);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking SaveSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void SaveSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            PianoRecording = false;
+
+            var imSavenFile = FilesSelectorInternalMessageEx.CreateSaveFileInternalMessageEx(
+                InternalMessagesExContainer, "Save Arduino Song File", PackIconKind.MusicNote);
+
+            imSavenFile.InitialDirectory = Environment.GetEnvironmentVariable("USERPROFILE");
+            imSavenFile.FilesTypes = new ObservableCollection<InternalMessageFileType>()
+            {
+                new InternalMessageFileType("Arduino Midi Song", new string[] { "*.ams" }),
+                new InternalMessageFileType("All Files", new string[] { "*.*" }),
+            };
+
+            imSavenFile.OnClose += (s, fe) =>
+            {
+                if (fe.Result == InternalMessageResult.Ok)
+                {
+                    string notesData = JsonConvert.SerializeObject(Notes, Formatting.Indented);
+                    File.WriteAllText(fe.FilePath, notesData);
+                }
+            };
+
+            InternalMessagesExContainer.ShowMessage(imSavenFile);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking AddSongNote button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void AddSongNoteButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            string noteValue = PianoNotes.NoteC1;
+            int duration = 2;
+
+            if (SelectedNote != null)
+            {
+                noteValue = SelectedNote.Note;
+                duration = SelectedNote.Duration;
+            }
+
+            var note = new PianoNote(noteValue, duration);
+            Notes.Add(note);
+            SelectedNote = note;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking AddSongBreakNote button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void AddSongBreakNoteButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            Notes.Add(PianoNote.LineBreak());
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking AddSongPauseNote button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void AddSongPauseNoteButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            Notes.Add(PianoNote.Pause(100));
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking RemoveSongNote button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void RemoveSongNoteButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            var notes = PianoNotesListViewEx.SelectedItems.Cast<PianoNote>().ToList();
+
+            if (notes != null && notes.Any())
+            {
+                notes.ForEach(note =>
+                {
+                    if (Notes.Any(n => n == note))
+                        Notes.Remove(note);
+                });
+
+                SelectedNote = new PianoNote(PianoNotes.NoteC1, 2);
+            }
+            else if (SelectedNote != null)
+            {
+                if (Notes.Any(n => n == SelectedNote))
+                    Notes.Remove(SelectedNote);
+
+                SelectedNote = new PianoNote(PianoNotes.NoteC1, 2);
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking ClearSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void ClearSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            PianoRecording = false;
+            Notes.Clear();
+            SelectedNote = new PianoNote(PianoNotes.NoteC1, 2);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking PlayPauseSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void PlayPauseSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            if (Notes.Any())
+            {
+                var bgPlayer = new BackgroundWorker()
+                {
+                    WorkerReportsProgress = true,
+                    WorkerSupportsCancellation = true
+                };
+
+                bgPlayer.DoWork += (s, we) =>
+                {
+                    var notes = we.Argument as ObservableCollection<PianoNote>;
+                    var worker = (BackgroundWorker)s;
+
+                    if (notes != null)
+                    {
+                        foreach (var note in notes)
+                        {
+                            if (worker.CancellationPending)
+                                return;
+
+                            if (note.IsBreak)
+                                continue;
+
+                            else if (note.IsPause)
+                            {
+                                worker.ReportProgress(note.Duration, note.Note);
+                                Thread.Sleep(note.Duration);
+                            }
+
+                            else
+                            {
+                                worker.ReportProgress(CalculateNoteDuration(note.Duration), note.Note);
+
+                                UInt16 tone = Convert.ToUInt16(PianoNotes.GetNoteValue(note.Note));
+                                int duration = CalculateNoteDuration(note.Duration);
+
+                                PlayTone(tone, duration);
+                                Thread.Sleep(duration);
+                            }
+                        }
+                    }
+                };
+
+                var imAwaiter = new AwaitInternalMessageEx(InternalMessagesExContainer, "Playing", "Playing", PackIconKind.Play);
+                imAwaiter.AllowCancel = true;
+                imAwaiter.OnClose += (s, imc) =>
+                {
+                    if (imc.Result == InternalMessageResult.Cancel)
+                        bgPlayer.CancelAsync();
+                };
+
+                bgPlayer.ProgressChanged += (s, wp) =>
+                {
+                    string note = (string) wp.UserState;
+                    imAwaiter.Message = $"Playing note {note}, duration {wp.ProgressPercentage} ms.";
+                };
+
+                bgPlayer.RunWorkerCompleted += (s, wc) =>
+                {
+                    imAwaiter.Close();
+                };
+
+                InternalMessagesExContainer.ShowMessage(imAwaiter);
+                bgPlayer.RunWorkerAsync(Notes);
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking RecordPauseSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void RecordPauseSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            PianoRecording = true;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking StopRecordSong button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void StopRecordSongButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            PianoRecording = false;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after clicking UploadSongToArduino button. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Routed Event Arguments. </param>
+        private void UploadSongToArduinoButtonEx_Click(object sender, RoutedEventArgs e)
+        {
+            string message = "/play ";
+
+            foreach (var note in Notes.Where(n => !n.IsBreak))
+                message += $"{PianoNotes.GetNoteValue(note.Note)},{note.Duration};";
+
+            SendMessage(message);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Motehod invoked after pressing cursor key when it's over PianoNote ListViewEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Mouse Button Event Arguments. </param>
+        private void PianoNotesListViewEx_PreviewMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            ListViewEx listViewEx = sender as ListViewEx;
+
+            _pianoNoteDragStartPoint = e.GetPosition(null);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Motehod invoked after moving cursor over PianoNote ListViewEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Mouse Button Event Arguments. </param>
+        private void PianoNotesListViewEx_PreviewMouseMove(object sender, MouseEventArgs e)
+        {
+            ListViewEx listViewEx = sender as ListViewEx;
+            ListViewItemEx listViewItem = null;
+            PianoNote pianoNote = null;
+            DataObject dragData = null;
+
+            // Is LMB down and did the mouse move far enough to register a drag?
+            if (e.LeftButton == MouseButtonState.Pressed &&
+                (Math.Abs(_pianoNoteDragStartPoint.X - e.GetPosition(null).X) > SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(_pianoNoteDragStartPoint.Y - e.GetPosition(null).Y) > SystemParameters.MinimumVerticalDragDistance))
+            {
+                // Get the ListBoxItem object from the object being dragged
+                listViewItem = FindParent<ListViewItemEx>((DependencyObject)e.OriginalSource);
+
+                if (listViewItem != null)
+                {
+                    pianoNote = (PianoNote)listViewEx.ItemContainerGenerator.ItemFromContainer(listViewItem);
+                    dragData = new DataObject("piano_note", pianoNote);
+
+                    DragDrop.DoDragDrop(listViewItem, dragData, DragDropEffects.Move);
+                }
+            }
+
+            // Is LMB down and did the mouse move far enough to register a drag?
+            if (e.LeftButton == MouseButtonState.Pressed &&
+                (Math.Abs(_pianoNoteDragStartPoint.X - e.GetPosition(null).X) > SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(_pianoNoteDragStartPoint.Y - e.GetPosition(null).Y) > SystemParameters.MinimumVerticalDragDistance))
+            {
+                // Get the ListBoxItem object from the object being dragged
+                listViewItem = FindParent<ListViewItemEx>((DependencyObject)e.OriginalSource);
+
+                if (listViewItem != null)
+                {
+                    pianoNote = (PianoNote)listViewEx.ItemContainerGenerator.ItemFromContainer(listViewItem);
+                    dragData = new DataObject("piano_note", pianoNote);
+
+                    DragDrop.DoDragDrop(listViewItem, dragData, DragDropEffects.Move);
+                }
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Motehod invoked after releasing cursor key when it's over PianoNote ListViewEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Mouse Button Event Arguments. </param>
+        private void PianoNotesListViewEx_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            ListViewEx listViewEx = sender as ListViewEx;
+            List<PianoNote> pianoNotes = null;
+
+            if (listViewEx != null)
+            {
+                pianoNotes = listViewEx.SelectedItems.Cast<PianoNote>().ToList();
+            }
+
+            if (pianoNotes != null && pianoNotes.Any() && pianoNotes.Count > 1)
+            {
+                var noteValue = pianoNotes
+                    .Where(n => !n.IsBreak)
+                    .GroupBy(n => n.Note)
+                    .OrderByDescending(g => g.Count())
+                    .FirstOrDefault().Key;
+
+                var duration = pianoNotes
+                    .Where(n => !n.IsBreak)
+                    .GroupBy(n => n.Duration)
+                    .OrderByDescending(g => g.Count())
+                    .FirstOrDefault().Key;
+
+                SelectedNote = new PianoNote(noteValue, duration);
+            }
+            else if (listViewEx?.SelectedItem != null && listViewEx.SelectedItem.GetType() == typeof(PianoNote))
+            {
+                SelectedNote = listViewEx.SelectedItem as PianoNote;
+            }
+            else
+            {
+                SelectedNote = new PianoNote(PianoNotes.NoteC1, 2);
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Motehod invoked after dropping item on PianoNote ListViewEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Drag Event Arguments. </param>
+        private void PianoNotesListViewEx_Drop(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("piano_note"))
+                return;
+
+            PianoNote pianoNote = e.Data.GetData("piano_note") as PianoNote;
+            // Hit-test needed for rearranging items in the same ListBox
+            HitTestResult hit = VisualTreeHelper.HitTest((ListViewEx)sender, e.GetPosition((ListViewEx)sender));
+            PianoNote target = (PianoNote)FindParent<ListViewItemEx>(hit.VisualHit)?.DataContext;
+
+            int removeIdx = Notes.IndexOf(pianoNote);
+            int targetIdx = Notes.IndexOf(target);
+
+            if (removeIdx < targetIdx)
+            {
+                Notes.Insert(targetIdx + 1, pianoNote);
+                Notes.RemoveAt(removeIdx);
+            }
+            else
+            {
+                removeIdx++;
+                if (Notes.Count + 1 > removeIdx)
+                {
+                    Notes.Insert(targetIdx < 0 ? Notes.Count : targetIdx, pianoNote);
+                    Notes.RemoveAt(removeIdx);
+                }
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Motehod invoked after started dragging item on PianoNote ListViewEx. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Drag Event Arguments. </param>
+        private void PianoNotesListViewEx_DragEnter(object sender, DragEventArgs e)
+        {
+            if (!e.Data.GetDataPresent("piano_note") || sender == e.Source)
+                e.Effects = DragDropEffects.None;
+        }
+
+        #endregion PIANO METHODS
+
         #region SETUP METHODS
 
         //  --------------------------------------------------------------------------------
@@ -1015,6 +1854,7 @@ namespace ArudinoConnect.Windows
         {
             BaudRatesCollection = new ObservableCollection<int>(SerialPortConnection.BAUD_RATES);
             DevicesCollection = new ObservableCollection<ComPort>(SerialPortConnection.GetComDevices());
+            Notes = new ObservableCollection<PianoNote>();
 
             HourBeepCollection = new ObservableCollection<(int Value, string Title)>()
             {
@@ -1077,10 +1917,11 @@ namespace ArudinoConnect.Windows
         //  --------------------------------------------------------------------------------
         /// <summary> Execute command with direct output. </summary>
         /// <param name="command"> Command to execute. </param>
+        /// <param name="requiredResponse"> Waiting for particular response. </param>
         /// <param name="timeout"> Time waiting for response in miliseconds. </param>
         /// <returns> Tuple (bool, string) where first value idicates success or fail, 
         /// and second value contains received data. </returns>
-        private CommandResult ExecuteCommand(string command, int timeout = 5000)
+        private CommandResult ExecuteCommand(string command, string requiredResponse = null, int timeout = 5000)
         {
             string message = null;
             bool successed = false;
@@ -1112,12 +1953,63 @@ namespace ArudinoConnect.Windows
                 DataController.SerialPortConnection.ReceivedMessage += receiver;
                 DataController.SerialPortConnection.SendMessage(command);
 
-                while (!cancel && string.IsNullOrEmpty(message) && dtStart.AddMilliseconds(timeout) > DateTime.Now) { };
+                while (!cancel && dtStart.AddMilliseconds(timeout) > DateTime.Now)
+                {
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        if (string.IsNullOrEmpty(requiredResponse))
+                            break;
+                        else if (message.EndsWith(requiredResponse))
+                            break;
+                    }
+                };
 
                 DataController.SerialPortConnection.ReceivedMessage -= receiver;
             }
 
             return new CommandResult(successed, message);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Calculate note duration. </summary>
+        /// <param name="initialDuration"> Initial duration. </param>
+        /// <returns> Calculated note duration. </returns>
+        private int CalculateNoteDuration(int initialDuration)
+        {
+            int note_duration = 1000 / initialDuration;
+            int note_pause = (int)(note_duration * 1.30);
+
+            return note_pause;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Find parent UI object. </summary>
+        /// <typeparam name="T"> Object type. </typeparam>
+        /// <param name="child"> Dependency of child object. </param>
+        /// <param name="parentName"> Parent object name. </param>
+        /// <returns> Parent UI object. </returns>
+        private T FindParent<T>(DependencyObject child, string parentName = null) where T : DependencyObject
+        {
+            if (child == null) return null;
+
+            T foundParent = null;
+            var currentParent = VisualTreeHelper.GetParent(child);
+
+            do
+            {
+                var frameworkElement = currentParent as FrameworkElement;
+                
+                if ((frameworkElement.Name == parentName || parentName == null) && frameworkElement is T)
+                {
+                    foundParent = (T)currentParent;
+                    break;
+                }
+
+                currentParent = VisualTreeHelper.GetParent(currentParent);
+
+            } while (currentParent != null);
+
+            return foundParent;
         }
 
         #endregion UTILITY METHODS
@@ -1172,7 +2064,7 @@ namespace ArudinoConnect.Windows
                 else if (result != null && result.Any())
                     foreach (var singleResult in result)
                     {
-                        if (singleResult.Result.Success && singleResult.Result.Data.StartsWith("OK"))
+                        if (singleResult.Result.Success && singleResult.Result.Data.EndsWith("OK"))
                             resultMessage += $"{singleResult.CompleteMessage}{Environment.NewLine}";
                         else
                             resultMessage += $"{singleResult.FailMessage}{Environment.NewLine}";
@@ -1283,6 +2175,42 @@ namespace ArudinoConnect.Windows
             TrayIcon.Dispose();
         }
 
+        //  --------------------------------------------------------------------------------
+        /// <summary> Method invoked after pressing keys in window. </summary>
+        /// <param name="sender"> Object from which method has been invoked. </param>
+        /// <param name="e"> Key Event Arguments. </param>
+        private void Window_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (MainTabControlEx.SelectedItem == PianoTabItemEx)
+            {
+                if (PianoKeyMap.TryGetValue(e.Key, out int keyIndex))
+                {
+                    var keyName = PianoNotes.GetNote(keyIndex, PianoShift);
+                    UInt16 tone = Convert.ToUInt16(PianoNotes.GetNoteValue(keyName));
+                    int duration = CalculateNoteDuration(NoteDuration);
+
+                    PlayTone(tone, duration);
+
+                    if (PianoRecording)
+                    {
+                        var newNote = new PianoNote(keyName, NoteDuration);
+                        Notes.Add(newNote);
+                        SelectedNote = newNote;
+                    }
+                }
+                else if (e.Key == Key.Space)
+                {
+                    if (PianoRecording)
+                    {
+                        var newNote = new PianoNote(PianoNotes.NotePause, 100);
+                        Notes.Add(newNote);
+                        SelectedNote = newNote;
+                    }
+                }
+            }
+        }
+
         #endregion WINDOW METHODS
+
     }
 }

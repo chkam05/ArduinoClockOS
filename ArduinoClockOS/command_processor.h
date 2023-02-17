@@ -49,8 +49,13 @@ class CommandProcessor
         int   ProcessBeepSetCommand();
         int   ProcessBrightnessSetCommand();
         int   ProcessDateSetCommand();
+        int   ProcessLedSetCommand();
         int   ProcessMessageCommand();
+        int   ProcessPlayCommand();
+        int   ProcessServiceLockCommand();
+        int   ProcessServiceUnlockCommand();
         int   ProcessTimeSetCommand();
+        int   ProcessVpStart();
         int   ProcessWeatherAddCommand();
         int   ProcessWeatherClearCommand();
         int   ProcessWeatherSetCommand();
@@ -428,6 +433,28 @@ int CommandProcessor::ProcessDateSetCommand()
 }
 
 //  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia wyslania polecenia IR kontroli tasmami led.
+int CommandProcessor::ProcessLedSetCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("led");
+        return COMMAND_NONE;
+    }
+
+    int set_result = this->controller->led_controller->ProcessCommand(this->params_data);
+
+    if (set_result == LED_COMMAND_OK)
+    {
+        this->NotifyConfigurationUpdated();
+        return COMMAND_PROCESSED_OK;
+    }
+    
+    this->RaiseInvalidParameterError("led " + this->params_data);
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia wiadomosci.
 int CommandProcessor::ProcessMessageCommand()
 {
@@ -440,7 +467,62 @@ int CommandProcessor::ProcessMessageCommand()
     int setup_result = this->controller->msg_ctrl->SetupMessage(this->params_data);
 
     if (setup_result == MESSAGE_DISPLAYING)
+    {    
         this->controller->SetMachineState(GLOBAL_STATE_MESSAGE);
+        this->NotifyConfigurationUpdated();
+    }
+
+    return COMMAND_PROCESSED_OK;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia odtwarzania melodii.
+int CommandProcessor::ProcessPlayCommand()
+{
+    if (this->params_data == NULL || this->params_data == "")
+    {
+        this->RaiseInvalidParameterError("date set");
+        return COMMAND_NONE;
+    }
+
+    int setup_result = this->controller->song_controller->SetupSong(this->params_data);
+
+    if (setup_result == SONG_PLAYING)
+    {
+        this->controller->SetMachineState(GLOBAL_STATE_SONG_PLAY);
+        this->NotifyConfigurationUpdated();
+    }
+
+    return COMMAND_PROCESSED_OK;    
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia blokady serwisowej.
+int CommandProcessor::ProcessServiceLockCommand()
+{
+    this->controller->SetMachineState(GLOBAL_STATE_SERVICE_LOCK);
+    this->controller->display_ctrl->Clear();
+
+    DisplayString * dsp_str = this->controller->GetDisplayString(TEXT_ALIGN_CENTER);
+
+    if (this->params_data == NULL || this->params_data == "")
+        dsp_str->text = "SERVICE LOCK";
+    else
+        dsp_str->text = this->params_data;
+    
+    this->controller->display_ctrl->PrintDS(dsp_str, true);
+    this->NotifyConfigurationUpdated();
+    
+    return COMMAND_PROCESSED_OK;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia wylaczenia blokady serwisowej.
+int CommandProcessor::ProcessServiceUnlockCommand()
+{
+    this->controller->SetMachineState(GLOBAL_STATE_NORMAL);
+    this->controller->display_ctrl->Clear();
+    this->NotifyConfigurationUpdated();
 
     return COMMAND_PROCESSED_OK;
 }
@@ -479,6 +561,13 @@ int CommandProcessor::ProcessTimeSetCommand()
 
     this->RaiseInvalidParameterError("time set");
     return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
+//  Przetworzenie polecenia uruchomienia połączenia z Visual Playerem.
+int CommandProcessor::ProcessVpStart()
+{
+    //
 }
 
 //  ----------------------------------------------------------------------------
@@ -576,17 +665,32 @@ int CommandProcessor::ProcessCommand(String raw_data)
     else if (this->ValidateCommand("/date set"))
         return this->ProcessDateSetCommand();
     
+    else if (this->ValidateCommand("/led"))
+        return this->ProcessLedSetCommand();
+    
     else if (this->ValidateCommand("/init"))
         return this->ProcessIsInitializedCommand();
     
     else if (this->ValidateCommand("/msg"))
         return this->ProcessMessageCommand();
     
+    else if (this->ValidateCommand("/play"))
+        return this->ProcessPlayCommand();
+    
+    else if (this->ValidateCommand("/lock"))
+        return this->ProcessServiceLockCommand();
+    
+    else if (this->ValidateCommand("/unlock"))
+        return this->ProcessServiceUnlockCommand();
+    
     else if (this->ValidateCommand("/time get"))
         return this->ProcessTimeGetCommand();
 
     else if (this->ValidateCommand("/time set"))
         return this->ProcessTimeSetCommand();
+    
+    else if (this->ValidateCommand("/vp start"))
+        return this->ProcessVpStart();
     
     else if (this->ValidateCommand("/weather add"))
         return this->ProcessWeatherAddCommand();

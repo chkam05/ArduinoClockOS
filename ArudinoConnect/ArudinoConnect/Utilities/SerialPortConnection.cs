@@ -148,6 +148,11 @@ namespace ArudinoConnect.Utilities
                 ReceivedMessage?.Invoke(this,
                     new SerialPortReceivedMessageEventArgs(e.Message, ReceivedMessageState.Error));
             }
+            catch (Exception e)
+            {
+                ReceivedMessage?.Invoke(this,
+                    new SerialPortReceivedMessageEventArgs(e.Message, ReceivedMessageState.Error));
+            }
 
             OnPropertyChanged(nameof(IsConnected));
             return _serialPort?.IsOpen ?? false;

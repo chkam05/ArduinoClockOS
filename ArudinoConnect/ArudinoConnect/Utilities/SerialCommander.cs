@@ -63,7 +63,7 @@ namespace ArudinoConnect.Utilities
 
                     bgSetter.ReportProgress(data.IndexOf(singleCommand), singleCommand.Message);
 
-                    var singleCommandResult = ExecuteCommand(singleCommand.Command);
+                    var singleCommandResult = ExecuteCommand(singleCommand.Command, singleCommand.RequiredResponse);
 
                     result.Add(new ConfigCommandResult()
                     {
@@ -105,7 +105,7 @@ namespace ArudinoConnect.Utilities
 
             bgSetter.DoWork += (s, ew) =>
             {
-                var result = ExecuteCommand(data.Command);
+                var result = ExecuteCommand(data.Command, data.RequiredResponse);
                 ew.Result = result;
             };
 
@@ -130,7 +130,7 @@ namespace ArudinoConnect.Utilities
         /// <param name="timeout"> Time waiting for response in miliseconds. </param>
         /// <returns> Tuple (bool, string) where first value idicates success or fail, 
         /// and second value contains received data. </returns>
-        private CommandResult ExecuteCommand(string command, int timeout = 5000)
+        private CommandResult ExecuteCommand(string command, string requiredResponse = null, int timeout = 5000)
         {
             string message = null;
             bool successed = false;
@@ -162,7 +162,16 @@ namespace ArudinoConnect.Utilities
                 _connection.ReceivedMessage += receiver;
                 _connection.SendMessage(command);
 
-                while (!cancel && string.IsNullOrEmpty(message) && dtStart.AddMilliseconds(timeout) > DateTime.Now) { };
+                while (!cancel && dtStart.AddMilliseconds(timeout) > DateTime.Now)
+                {
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        if (string.IsNullOrEmpty(requiredResponse))
+                            break;
+                        else if (message.EndsWith(requiredResponse))
+                            break;
+                    }
+                };
 
                 _connection.ReceivedMessage -= receiver;
             }

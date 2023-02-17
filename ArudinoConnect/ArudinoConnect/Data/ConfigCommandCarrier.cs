@@ -18,6 +18,7 @@ namespace ArudinoConnect.Data
         public string CompleteMessage { get; set; }
         public string FailMessage { get; set; }
         public PackIconKind Icon { get; set; }
+        public string RequiredResponse { get; set; }
 
 
         //  METHODS

@@ -62,7 +62,12 @@ void ProcessInput()
     //  Przetworzenie danych z konsoli.
     if (controller->IsCommandValueInputed())
     {
-        switch (command_processor->ProcessCommand(controller->GetInputCommand()))
+        int proc_result = command_processor->ProcessCommand(controller->GetInputCommand());
+
+        if (controller->IsServiceLocked())
+            return;
+
+        switch (proc_result)
         {
             case COMMAND_NONE:
                 break;
@@ -75,13 +80,6 @@ void ProcessInput()
                 controller->SetDisplayingState(DISPLAY_DATETIME_STATE);
                 return;
         }
-    }
-
-    //  Przetworzenie danych z klawiatury.
-    if (controller->GetInputKey() > KEYPAD_NO_KEY)
-    {
-        controller->serial_ctrl->WriteRawData("Keyboard input: [" + String(controller->GetInputKey()) + "]", SERIAL_COM);
-        return;
     }
 }
 
@@ -222,8 +220,23 @@ void ProcessMessageState(int input)
 }
 
 //  ----------------------------------------------------------------------------
+void ProcessSongPlayState(int input)
+{
+    if (input == SONG_FINISHED)
+    {
+        controller->SetMachineState(GLOBAL_STATE_NORMAL);
+        controller->display_ctrl->Clear();
+        controller->SetDisplayingState(DISPLAY_DATETIME_STATE);
+    }
+}
+
+//  ----------------------------------------------------------------------------
 void ProcessFunctionalities()
 {
+    //  Przerwanie z powodu blokady serwisowej.
+    if (controller->IsServiceLocked())
+        return;
+      
     //  Przetworzenie globalnych funkcjonlanosci.
     controller->ProcessFunctionalities();
 
@@ -263,6 +276,15 @@ void ProcessFunctionalities()
         int message_output = controller->msg_ctrl->ProcessInput(input_key);
         ProcessMessageState(message_output);
     }
+    else if (machine_state == GLOBAL_STATE_SONG_PLAY)
+    {
+        int song_output = controller->song_controller->ProcessInput(input_key);
+        ProcessSongPlayState(song_output);
+    }
+    else if (machine_state == GLOBAL_STATE_VPLAYER)
+    {
+        //
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -300,6 +322,10 @@ void ProcessAlarmDisplay()
 //  ----------------------------------------------------------------------------
 void ProcessDisplay()
 {
+    //  Przerwanie z powodu blokady serwisowej.
+    if (controller->IsServiceLocked())
+        return;
+    
     int machine_state = controller->GetMachineState();
 
     if (machine_state == GLOBAL_STATE_NORMAL)
@@ -313,6 +339,9 @@ void ProcessDisplay()
     
     else if (machine_state == GLOBAL_STATE_MESSAGE)
         controller->msg_ctrl->UpdateDisplay();
+    
+    else if (machine_state == GLOBAL_STATE_SONG_PLAY)
+        controller->song_controller->ProcessPlaying();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

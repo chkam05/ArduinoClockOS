@@ -11,18 +11,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #define NOTE_B0  31
-#define NOTE_C1  33
-#define NOTE_CS1 35
-#define NOTE_D1  37
-#define NOTE_DS1 39
-#define NOTE_E1  41
-#define NOTE_F1  44
-#define NOTE_FS1 46
-#define NOTE_G1  49
-#define NOTE_GS1 52
-#define NOTE_A1  55
-#define NOTE_AS1 58
-#define NOTE_B1  62
+#define NOTE_C1  33     //  C   1
+#define NOTE_CS1 35     //  C^  2
+#define NOTE_D1  37     //  D   3
+#define NOTE_DS1 39     //  D^  4
+#define NOTE_E1  41     //  E   5
+#define NOTE_F1  44     //  F   6
+#define NOTE_FS1 46     //  F^  7
+#define NOTE_G1  49     //  G   8
+#define NOTE_GS1 52     //  G^  9
+#define NOTE_A1  55     //  A   *
+#define NOTE_AS1 58     //  A^  0
+#define NOTE_B1  62     //  H   #
 #define NOTE_C2  65
 #define NOTE_CS2 69
 #define NOTE_D2  73

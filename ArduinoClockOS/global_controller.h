@@ -13,12 +13,15 @@
 #include "clock_controller.h"
 #include "clock_timer.h"
 #include "display_controller.h"
+#include "ir_controller.h"
+#include "led_controller.h"
 #include "keypad_controller.h"
 #include "message_controller.h"
 #include "photoresistor_controller.h"
 #include "sd_card_controller.h"
 #include "serial_controller.h"
 #include "temperature_sensor_controller.h"
+#include "song_controller.h"
 #include "alarm.h"
 #include "weather.h"
 
@@ -39,12 +42,15 @@
 #define DISPLAY_TEMPERATURE_IN_STATE    1
 #define DISPLAY_TEMPERATURE_OUT_STATE   2
 
-#define GLOBAL_STATES                   5
+#define GLOBAL_STATES                   8
 #define GLOBAL_STATE_NORMAL             0
 #define GLOBAL_STATE_MENU               1
 #define GLOBAL_STATE_SETTER             2
 #define GLOBAL_STATE_ALARM              3
 #define GLOBAL_STATE_MESSAGE            4
+#define GLOBAL_STATE_SONG_PLAY          5
+#define GLOBAL_STATE_VPLAYER            6
+#define GLOBAL_STATE_SERVICE_LOCK       7
 
 const String CONFIG_FILE_NAME = "conf.ini";
 
@@ -82,6 +88,7 @@ class GlobalController
         void  InitializeClock();
         void  InitializeBuzzer();
         void  InitializeDisplay();
+        void  InitializeIRLed();
         void  InitializePhotoresistors();
         void  InitializeSdCard();
         void  InitializeTemperatureSensors();
@@ -97,6 +104,8 @@ class GlobalController
         BuzzerController              * buzzer_ctrl;
         ClockController               * clock_ctrl;
         DisplayController             * display_ctrl;
+        IRController                  * ir_controller;
+        LedController                 * led_controller;
         MessageController             * msg_ctrl;
         SdCardController              * sdcard_ctrl;
         PhotoresistorController       * photoresistor_ctrl_left;
@@ -104,6 +113,8 @@ class GlobalController
         TemperatureSensorController   * temp_sensor_ctrl_in;
         TemperatureSensorController   * temp_sensor_ctrl_out;
         ClockTimer                    * update_timer;
+
+        SongController                * song_controller;
 
         GlobalController();
 
@@ -148,6 +159,7 @@ class GlobalController
 
         //  Machine States Management.
         bool  IsInitialized();
+        bool  IsServiceLocked();
         int   GetMachineState();
         void  SetMachineState(int machine_state);
         void  FinalizeCycle();
@@ -322,6 +334,14 @@ void GlobalController::InitializeDisplay()
 }
 
 //  ----------------------------------------------------------------------------
+//  Inicjalizacja, konfiguracja i test kontrolera modulow IR i Led.
+void GlobalController::InitializeIRLed()
+{
+    this->ir_controller = new IRController();
+    this->led_controller = new LedController(this->ir_controller);
+}
+
+//  ----------------------------------------------------------------------------
 //  Inicjalizacja, konfiguracja i test modulu kontrolera fotorezystorow.
 void GlobalController::InitializePhotoresistors()
 {
@@ -408,12 +428,16 @@ void GlobalController::Initialize()
     //  Inicjalizacja, konfiguracja i test kontrolera modulu sensorow temperatury.
     this->InitializeTemperatureSensors();
 
+    //  Inicjalizacja, konfiguracja i test kontrolera modulow IR i Led.
+    this->InitializeIRLed();
+
     //  Inicjalizacja, konfiguracja i test modulu kontrolera wyswietlacza.
     this->InitializeDisplay();
 
     //  Inicjalizacja dodatkowych zaleznych komponentow.
     this->InitializeAlarm();
     this->InitializeWeather();
+    this->song_controller = new SongController(this->display_ctrl, this->buzzer_ctrl);
 
     //  Zaladowanie danych z pliku.
     this->LoadData();
@@ -580,6 +604,10 @@ void GlobalController::ProcessSecondLedBlinking()
 //  Przetwarzanie funkcjonalnosci.
 void GlobalController::ProcessFunctionalities()
 {
+    //  Pominiecie niepotrzebnych wykonan dla okreslonego stanu.
+    if (this->global_state == GLOBAL_STATE_SONG_PLAY)
+        return;
+    
     this->ProcessSecondLedBlinking();
     this->ProcessAutoBrightness();
     this->ProcessBeepHour();
@@ -777,6 +805,15 @@ void GlobalController::ProcessInput()
 bool GlobalController::IsInitialized()
 {
     return this->initialized;
+}
+
+//  ----------------------------------------------------------------------------
+/*  Pobranie informacji o blokadzie serwisowej.
+ *  @result: Informacja o blokadzie serwisowej.
+ */
+bool GlobalController::IsServiceLocked()
+{
+    return this->global_state == GLOBAL_STATE_SERVICE_LOCK;
 }
 
 //  ----------------------------------------------------------------------------
