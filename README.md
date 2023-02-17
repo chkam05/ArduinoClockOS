@@ -155,6 +155,5 @@ Application that allow to control Arduino from PC using serial communication.
   - Setting Hours beeping in Arduino.
   - Sending full configuration at once to Arduino.
 
-## In development:
-
-- Sending weather to arduino (+ thread that will work in background and send weather every 3 days - app will work in Windows Tray)
+- Minimalizing application to Windows Tray
+- Reacting to "/get weahter" command from Arduino when data are not presented on SDCard, or are not up to date (no data for current date).
