@@ -40,6 +40,8 @@ Software for handling Arduino multi-device clock device.
     - 4: snowy,
     - 5: fog,
     - 6: thunder
+- Playing song with buzzer.
+- Controling leds strip by IR module.
 
 ## Used components:
 
@@ -47,11 +49,50 @@ Software for handling Arduino multi-device clock device.
 - Bluetooth module HC-06
 - Buzzer 5V 12MM THT
 - Dallas led matrix 8x 8x8 MAX7219
+- GRL-12509 (IR Transmitter)
 - Keypad 4x4 HX13B001
 - 2x Photoresistor GL5528
 - Real time clock DS3231
 - SD Card module HW-125
 - Temperature sensor DALLAS DS18B20
+
+## Commands:
+/alarm get - Getting alarm configuration.  
+/alarm set [off/disable] - Disable alarm.  
+/alarm set hh:mm - Set alarm.  
+/beep get - Getting hourly beep configuration.  
+/beep set [off/disable] - Disable hourly beep.  
+/beep set [0/1/3/6/12/24] - Set hourly beep every x hours.  
+/brightness get - Getting brightness configuration.  
+/brightness set [a/auto] - Set auto brightness.  
+/brightness set [0..8] - Set brightness to x value.  
+/date get - Getting date configuration.  
+/date set [dd.MM.yyyy/dd.w.MM.yyyy] - Set date by sending day, month, year or day, week number, month year.  
+/init - Check if everything has been loaded after restart.  
+/lock [message] - Lock all functionalities to keep fast communication with PC. You can add message.  
+/msg [message] - Showing message.  
+/play note,duration;note,duration;note,duration;...; - Play song by sending notes and its duration. 0 note is pause.  
+/time get - Getting time configuration.  
+/time set [hh:mm:ss/hh:mm] - Set time by sending hour, minutes, seconds or just hour, minutes.  
+/unlock - Unlock all functionalities.  
+/weather clear - Clear current weather data.  
+/weather add yyyy.MM.dd 4,1,2,2,3 - Set weather by sending weather date, number of hours, and after comma, index of icon for weather forecast.  
+
+Extended description:  
+4 - is the number of hours, if in weahter forecast is weather for 00:00, 06:00, 12:00, 18:00  
+1 - is the weather icon for 00:00 hour  
+2 - is the weahter icon for 06:00, then for 12:00  
+3 - is the weather icon for 18:00  
+If there are less hours than 24, for example 4. Icon will be displayed from current weather forecast hour to next hour with available weather forecast.  
+
+Icons:  
+0 - Sunny,  
+1 - Part cloudy,  
+2 - Cloudy/Very cloudy,  
+3 - Shower/Sleet shower/Heavy shower/Sleet/Light rain/Heavy rain/Rain,  
+4 - Light snow/Heavy snow/Light snow shower/Heavy snow shower/Snow,  
+5 - Fog,  
+6 - Thundery shower/Thundery heavy rain/Thundery snow shower/Thunder,  
 
 ## Examples:
 
@@ -91,6 +132,15 @@ Application that allow to control Arduino from PC using serial communication.
 - Console Tab
   - Showing messages and debug messages that came from Arduino.
   - Sending messages and commands to arduino as pure text.
+
+- Lights Tab
+  - Controling LedStrip via IR in Arduino.
+
+- Piano Tab
+  - Composing songs.
+  - Saving and opening compositions.
+  - Playing songs.
+  - Sending song to Arduino to play via buzzer.
 
 - Weather Tab
   - Getting weather from http://wttr.in/
