@@ -37,7 +37,7 @@
 #define KEYPAD_OPTION_KEY   67    //  c
 #define KEYPAD_MENU_KEY     68    //  d
 
-const byte  KEYPAD_PIN_COLS[KEYPAD_COLS] = {23, 25, 27, 29};
+const byte  KEYPAD_PIN_COLS[KEYPAD_COLS] = {30, 32, 34, 36};
 const byte  KEYPAD_PIN_ROWS[KEYPAD_COLS] = {22, 24, 26, 28};
 const char  KEYPAD_MAP[KEYPAD_ROWS][KEYPAD_COLS] = {
     { '1', '2', '3', 'A' },
