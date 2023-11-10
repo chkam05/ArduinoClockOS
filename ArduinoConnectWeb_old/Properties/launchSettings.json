@@ -1,0 +1,13 @@
+﻿{
+  "profiles": {
+    "ArduinoConnectWeb": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "launchUrl": "Index/HomePage",
+      "applicationUrl": "http://localhost:5001",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      }
+    }
+  }
+}
