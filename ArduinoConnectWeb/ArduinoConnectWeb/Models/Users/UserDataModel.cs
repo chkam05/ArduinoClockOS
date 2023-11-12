@@ -3,7 +3,7 @@ using Newtonsoft.Json;
 
 namespace ArduinoConnectWeb.Models.Users
 {
-    public class UserDataModel : BaseUniqueDataModel
+    public class UserDataModel : BaseUniqueDataModel, ICloneable
     {
 
         //  VARIABLES
@@ -39,6 +39,29 @@ namespace ArduinoConnectWeb.Models.Users
         }
 
         #endregion CLASS METHODS
+
+        #region CLONE METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Creates a new object that is a copy of the current instance. </summary>
+        /// <returns> A new object that is a copy of this instance. </returns>
+        public object Clone()
+        {
+            var serializedObject = JsonConvert.SerializeObject(this);
+            var clonedObject = JsonConvert.DeserializeObject<UserDataModel>(serializedObject);
+
+            return clonedObject;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Creates a new object that is a copy of the current instance. </summary>
+        /// <returns> A new object that is a copy of this instance. </returns>
+        public UserDataModel? CloneWithType()
+        {
+            return (UserDataModel) Clone();
+        }
+
+        #endregion CLONE METHODS
 
         #region OVERWRITTEN OPERATOR METHODS
 
@@ -97,6 +120,13 @@ namespace ArduinoConnectWeb.Models.Users
         private DateTime GetCreatedDateTimeInUtc()
         {
             return DateTime.UtcNow;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Update last modified at date time. </summary>
+        public void UpdateLastModifiedAt()
+        {
+            LastModifiedAt = GetCreatedDateTimeInUtc();
         }
 
         #endregion UTILITY METHODS

@@ -31,22 +31,29 @@ namespace ArduinoConnectWeb.Controllers
 
         #endregion CLASS METHODS
 
-        #region DELETE CONTROLLER METHODS
+        #region DELETE USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Remove user by id. </summary>
+        /// <param name="id"> User identifier. </param>
+        /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpDelete("DeleteUser")]
         public async Task<IActionResult> DeleteUser([FromQuery] string id)
         {
-            //
+            var response = await _usersService.RemoveUser(id);
+
+            return response.IsSuccess
+                ? new OkObjectResult(response.ResponseData)
+                : CreateBadRequestObjectResultFromResponse(response);
         }
 
-        #endregion DELETE CONTROLLER METHODS
+        #endregion DELETE USER CONTROLLER METHODS
 
-        #region GET CONTROLLER METHODS
+        #region GET USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by identifier. </summary>
-        /// <param name="id"> Identifier. </param>
+        /// <param name="id"> User identifier. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserById")]
         public async Task<IActionResult> GetUserById([FromQuery] string id)
@@ -91,31 +98,46 @@ namespace ArduinoConnectWeb.Controllers
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
-        #endregion GET CONTROLLER METHODS
+        #endregion GET USER CONTROLLER METHODS
 
-        #region POST CONTROLLER METHODS
+        #region POST USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Create new user. </summary>
+        /// <param name="request"> Request user create model. </param>
+        /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPost("CreateUser")]
         public async Task<IActionResult> CreateUser([FromBody] RequestUserCreateModel request)
         {
-            //
+            var response = await _usersService.CreateUser(request);
+
+            return response.IsSuccess
+                ? new OkObjectResult(response.ResponseData)
+                : CreateBadRequestObjectResultFromResponse(response);
         }
 
-        #endregion POST CONTROLLER METHODS
+        #endregion POST USER CONTROLLER METHODS
 
-        #region UPDATE CONTROLLER METHODS
+        #region UPDATE USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Update user. </summary>
+        /// <param name="id"> User identifier. </param>
+        /// <param name="request"> Request user update model. </param>
+        /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPatch("UpdateUser")]
         public async Task<IActionResult> UpdateUser(
             [FromQuery] string id,
             [FromBody] RequestUserUpdateModel request)
         {
-            //
+            var response = await _usersService.UpdateUser(id, request);
+
+            return response.IsSuccess
+                ? new OkObjectResult(response.ResponseData)
+                : CreateBadRequestObjectResultFromResponse(response);
         }
 
-        #endregion UPDATE CONTROLLER METHODS
+        #endregion UPDATE USER CONTROLLER METHODS
 
         #region UTILITY METHODS
 

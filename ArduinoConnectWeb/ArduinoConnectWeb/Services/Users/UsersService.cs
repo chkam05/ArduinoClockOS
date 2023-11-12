@@ -1,6 +1,7 @@
 ﻿using ArduinoConnectWeb.DataContexts;
 using ArduinoConnectWeb.Models.Base;
 using ArduinoConnectWeb.Models.Users;
+using ArduinoConnectWeb.Utilities;
 using Newtonsoft.Json;
 using System;
 
@@ -39,14 +40,56 @@ namespace ArduinoConnectWeb.Services.Users
         #region INTERACTION METHODS
 
         //  --------------------------------------------------------------------------------
-        public void CreateUser()
+        /// <summary> Create new user. </summary>
+        /// <param name="requestUserCreateModel"> Request user create model. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<ResponseBaseModel<ResponseUserModel>> CreateUser(RequestUserCreateModel requestUserCreateModel)
         {
-            //
+            return await Task.Run(() =>
+            {
+                if (requestUserCreateModel == null)
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"No input data has been entered.");
+
+                if (string.IsNullOrEmpty(requestUserCreateModel.UserName))
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"{nameof(requestUserCreateModel.UserName)} cannot be empty.");
+
+                if (string.IsNullOrEmpty(requestUserCreateModel.Password))
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"{nameof(requestUserCreateModel.Password)} cannot be empty.");
+
+                if (requestUserCreateModel.Password != requestUserCreateModel.PasswordRepeat)
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"{nameof(requestUserCreateModel.Password)} and {nameof(requestUserCreateModel.PasswordRepeat)} does not match.");
+
+                if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserCreateModel.UserName.ToLower()))
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"User with {nameof(requestUserCreateModel.UserName)} {requestUserCreateModel.UserName} already exists.");
+
+                var newUser = new UserDataModel(
+                    null,
+                    requestUserCreateModel.UserName,
+                    SecurityUtilities.ComputeSha256Hash(requestUserCreateModel.Password),
+                    requestUserCreateModel.PermissionLevel);
+
+                try
+                {
+                    _usersDataContext.AddUser(newUser);
+                    SaveDataContext();
+                }
+                catch (Exception exc)
+                {
+                    return new ResponseBaseModel<ResponseUserModel>(exc.Message);
+                }
+
+                return new ResponseBaseModel<ResponseUserModel>(GetResponseUserModel(newUser));
+            });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by identifier. </summary>
-        /// <param name="id"> Identifier. </param>
+        /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
         public async Task<ResponseBaseModel<ResponseUserModel>> GetUserById(string id)
         {
@@ -55,7 +98,8 @@ namespace ArduinoConnectWeb.Services.Users
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
                 if (user is null)
-                    return new ResponseBaseModel<ResponseUserModel>($"No user with the given \"id\" id was found.");
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"No user with the given \"id\" id was found.");
 
                 return new ResponseBaseModel<ResponseUserModel>(GetResponseUserModel(user));
             });
@@ -72,7 +116,8 @@ namespace ArduinoConnectWeb.Services.Users
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.UserName == userName);
 
                 if (user is null)
-                    return new ResponseBaseModel<ResponseUserModel>($"No user with the given \"userName\" name was found.");
+                    return new ResponseBaseModel<ResponseUserModel>(
+                        $"No user with the given \"userName\" name was found.");
 
                 return new ResponseBaseModel<ResponseUserModel>(GetResponseUserModel(user));
             });
@@ -99,15 +144,91 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        public void RemoveUser()
+        /// <summary> Remove user by id. </summary>
+        /// <param name="id"> User identifier. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<ResponseBaseModel<string>> RemoveUser(string id)
         {
-            //
+            return await Task.Run(() =>
+            {
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
+
+                if (user is null)
+                    return new ResponseBaseModel<string>(
+                        $"No user with the given \"id\" id was found.");
+
+                try
+                {
+                    _usersDataContext.RemoveUser(user);
+                    SaveDataContext();
+                }
+                catch (Exception exc)
+                {
+                    return new ResponseBaseModel<string>(exc.Message);
+                }
+
+                return new ResponseBaseModel<string>(responseData: $"User deleted successfully.");
+            });
         }
 
         //  --------------------------------------------------------------------------------
-        public void UpdateUser()
+        /// <summary> Update user. </summary>
+        /// <param name="id"> User identifier. </param>
+        /// <param name="requestUserUpdateModel"></param>
+        /// <returns> Response view model. </returns>
+        public async Task<ResponseBaseModel<ResponseUserModel>> UpdateUser(string id, RequestUserUpdateModel requestUserUpdateModel)
         {
-            //
+            return await Task.Run(() =>
+            {
+                var anyChange = false;
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper())?.CloneWithType();
+
+                if (user is null)
+                    return new ResponseBaseModel<ResponseUserModel>($"No user with the given \"id\" id was found.");
+
+                if (!string.IsNullOrEmpty(requestUserUpdateModel.NewUserName))
+                {
+                    if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserUpdateModel.NewUserName.ToLower()))
+                        return new ResponseBaseModel<ResponseUserModel>(
+                            $"User with {nameof(requestUserUpdateModel.NewUserName)} {requestUserUpdateModel.NewUserName} already exists.");
+
+                    user.UserName = requestUserUpdateModel.NewUserName;
+                    anyChange = true;
+                }
+
+                if (!string.IsNullOrEmpty(requestUserUpdateModel.NewPassword))
+                {
+                    if (string.IsNullOrEmpty(requestUserUpdateModel.NewPasswordRepeat))
+                        return new ResponseBaseModel<ResponseUserModel>(
+                            $"{nameof(requestUserUpdateModel.NewPassword)} and {nameof(requestUserUpdateModel.NewPasswordRepeat)} does not match.");
+
+                    user.PasswordHash = SecurityUtilities.ComputeSha256Hash(requestUserUpdateModel.NewPassword);
+                    anyChange = true;
+                }
+
+                if (requestUserUpdateModel.NewPermissionLevel.HasValue)
+                {
+                    user.PermissionLevel = requestUserUpdateModel.NewPermissionLevel.Value;
+                    anyChange = true;
+                }
+
+                if (anyChange)
+                {
+                    user.UpdateLastModifiedAt();
+
+                    try
+                    {
+                        _usersDataContext.UpdateUser(user);
+                        SaveDataContext();
+                    }
+                    catch (Exception exc)
+                    {
+                        return new ResponseBaseModel<ResponseUserModel>(exc.Message);
+                    }
+                }
+
+                return new ResponseBaseModel<ResponseUserModel>(GetResponseUserModel(user));
+            });
         }
 
         #endregion INTERACTION METHODS
@@ -115,6 +236,9 @@ namespace ArduinoConnectWeb.Services.Users
         #region RESPONSE CREATE METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Get response user model. </summary>
+        /// <param name="user"> User data model. </param>
+        /// <returns> Response user model. </returns>
         private ResponseUserModel GetResponseUserModel(UserDataModel user)
         {
             return new ResponseUserModel()
@@ -191,6 +315,20 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         #endregion SETUP METHODS
+
+        #region UTILITY METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Save data context. </summary>
+        private void SaveDataContext()
+        {
+            var saved = _usersDataContext.SaveData();
+
+            if (saved)
+                _logger.LogInformation($"{nameof(UsersService)}: Users configuration updated.");
+        }
+
+        #endregion UTILITY METHODS
 
     }
 }

@@ -94,7 +94,7 @@ namespace ArduinoConnectWeb.DataContexts
 
             try
             {
-                var fileContent = JsonConvert.SerializeObject(Users);
+                var fileContent = JsonConvert.SerializeObject(Users, Formatting.Indented);
                 File.WriteAllText(filePath, fileContent);
 
                 return true;
@@ -158,6 +158,25 @@ namespace ArduinoConnectWeb.DataContexts
                 throw new ArgumentException("User does not exist.");
 
             Users.RemoveAt(userIndex);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Update user by replacing it. </summary>
+        /// <param name="user"> User data model to update. </param>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArgumentException"></exception>
+        public void UpdateUser(UserDataModel user)
+        {
+            if (user is null)
+                throw new ArgumentNullException($"{nameof(user)} parameter is null.");
+
+            int userIndex = Users.FindIndex(u => u.Id == user.Id);
+
+            if (userIndex < 0)
+                throw new ArgumentException("User does not exist.");
+
+            Users.RemoveAt(userIndex);
+            Users.Add(user);
         }
 
         #endregion USERS MANAGEMENT METHODS

@@ -5,11 +5,10 @@
 
         //  VARIABLES
 
-        public string Id { get; set; }
-        public string NewUserName { get; set; }
-        public string NewPassword { get; set; }
-        public string NewPasswordRepeat { get; set; }
-        public UserPermissionLevel NewPermissionLevel { get; set; }
+        public string? NewUserName { get; set; }
+        public string? NewPassword { get; set; }
+        public string? NewPasswordRepeat { get; set; }
+        public UserPermissionLevel? NewPermissionLevel { get; set; }
 
     }
 }
