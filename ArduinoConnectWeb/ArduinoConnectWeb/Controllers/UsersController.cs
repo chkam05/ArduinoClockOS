@@ -7,12 +7,11 @@ namespace ArduinoConnectWeb.Controllers
 {
     [ApiController]
     [Route("api/v1/Users")]
-    public class UsersController
+    public class UsersController : ControllerBase
     {
 
         //  VARIABLES
 
-        private readonly IConfiguration _configuration;
         private readonly IUsersService _usersService;
 
 
@@ -22,10 +21,9 @@ namespace ArduinoConnectWeb.Controllers
 
         //  --------------------------------------------------------------------------------
         /// <summary> UsersController class constructor. </summary>
-        /// <param name="configuration"> Interface of application configuration properties. </param>
-        public UsersController(IConfiguration configuration, IUsersService usersService)
+        /// <param name="usersService"> Interface of users service. </param>
+        public UsersController(IUsersService usersService)
         {
-            _configuration = configuration;
             _usersService = usersService;
         }
 

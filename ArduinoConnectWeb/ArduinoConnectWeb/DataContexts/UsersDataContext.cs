@@ -13,11 +13,32 @@ namespace ArduinoConnectWeb.DataContexts
 
         //  VARIABLES
 
+        private string _storageFilePath;
+        private object _storageFilePathLock = new object();
+
         private List<UserDataModel> _users;
         private object _usersLock = new object();
 
 
         //  GETTERS & SETTERS
+
+        public string StorageFilePath
+        {
+            get
+            {
+                lock (_storageFilePathLock)
+                {
+                    return _storageFilePath;
+                }
+            }
+            set
+            {
+                lock (_storageFilePathLock)
+                {
+                    _storageFilePath = value;
+                }
+            }
+        }
 
         public List<UserDataModel> Users
         {
@@ -44,8 +65,10 @@ namespace ArduinoConnectWeb.DataContexts
 
         //  --------------------------------------------------------------------------------
         /// <summary> UsersDataContext class constructor. </summary>
-        public UsersDataContext()
+        /// <param name="storageFilePath"> Storage file path. </param>
+        public UsersDataContext(string? storageFilePath = null)
         {
+            _storageFilePath = storageFilePath ?? DEFAULT_FILE_PATH;
             _users = new List<UserDataModel>();
         }
 
@@ -55,19 +78,17 @@ namespace ArduinoConnectWeb.DataContexts
 
         //  --------------------------------------------------------------------------------
         /// <summary> Load data from file. </summary>
-        /// <param name="filePath"> File path. </param>
         /// <returns> True - data loaded successfully; False - otherwise. </returns>
-        public bool LoadData(string? filePath = DEFAULT_FILE_PATH)
+        public bool LoadData()
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-                filePath = DEFAULT_FILE_PATH;
+            var loadFilePath = StorageFilePath;
 
-            if (!File.Exists(filePath))
+            if (!File.Exists(loadFilePath))
                 return false;
 
             try
             {
-                var fileContent = File.ReadAllText(filePath);
+                var fileContent = File.ReadAllText(loadFilePath);
                 var users = JsonConvert.DeserializeObject<List<UserDataModel>>(fileContent);
 
                 if (users == null || !users.Any())
@@ -85,17 +106,15 @@ namespace ArduinoConnectWeb.DataContexts
 
         //  --------------------------------------------------------------------------------
         /// <summary> Save data to file. </summary>
-        /// <param name="filePath"> File path. </param>
         /// <returns> True - data saved successfully; False - otherwise. </returns>
-        public bool SaveData(string? filePath = DEFAULT_FILE_PATH)
+        public bool SaveData()
         {
-            if (string.IsNullOrEmpty(filePath))
-                filePath = DEFAULT_FILE_PATH;
+            var saveFilePath = StorageFilePath;
 
             try
             {
                 var fileContent = JsonConvert.SerializeObject(Users, Formatting.Indented);
-                File.WriteAllText(filePath, fileContent);
+                File.WriteAllText(saveFilePath, fileContent);
 
                 return true;
             }

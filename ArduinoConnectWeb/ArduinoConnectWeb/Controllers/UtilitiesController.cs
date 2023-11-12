@@ -9,21 +9,15 @@ namespace ArduinoConnectWeb.Controllers
     public class UtilitiesController : ControllerBase
     {
 
-        //  VARIABLES
-
-        private readonly IConfiguration _configuration;
-
-
         //  METHODS
 
         #region CLASS METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> UtilitiesController class constructor. </summary>
-        /// <param name="configuration"> Interface of application configuration properties. </param>
-        public UtilitiesController(IConfiguration configuration)
+        public UtilitiesController()
         {
-            _configuration = configuration;
+            //
         }
 
         #endregion CLASS METHODS

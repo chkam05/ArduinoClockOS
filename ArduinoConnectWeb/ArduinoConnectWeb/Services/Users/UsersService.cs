@@ -12,6 +12,7 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  VARIABLES
 
+        private readonly UsersServiceConfig _config;
         private readonly ILogger<UsersService> _logger;
         private readonly UsersDataContext _usersDataContext;
 
@@ -22,17 +23,18 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  --------------------------------------------------------------------------------
         /// <summary> UsersService class constructor. </summary>
-        /// <param name="configuration"> Interface of application configuration properties. </param>
+        /// <param name="config"> Users service config. </param>
         /// <param name="logger"> Application logger. </param>
-        public UsersService(IConfiguration configuration, ILogger<UsersService> logger)
+        public UsersService(UsersServiceConfig config, ILogger<UsersService> logger)
         {
+            _config = config;
             _logger = logger;
 
-            _usersDataContext = new UsersDataContext();
+            _usersDataContext = new UsersDataContext(_config.UsersStorageFile);
             _usersDataContext.LoadData();
 
             if (!_usersDataContext.HasUsers())
-                InitializeDefaultUsers(configuration);
+                InitializeDefaultUsers();
         }
 
         #endregion CLASS METHODS
@@ -257,60 +259,46 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  --------------------------------------------------------------------------------
         /// <summary> Initialize default users. </summary>
-        /// <param name="configuration"> Interface of application configuration properties. </param>
-        private void InitializeDefaultUsers(IConfiguration configuration)
+        private void InitializeDefaultUsers()
         {
             _logger.LogInformation($"{nameof(UsersService)}: Initializing default users.");
 
-            try
+            //  Log initialization errors.
+
+            if (_config.InitErrorMessages?.Any() ?? false)
             {
-                var usersConfig = configuration.GetSection("Users");
-
-                if (usersConfig != null)
+                foreach (var errorMessage in _config.InitErrorMessages)
                 {
-                    foreach (var userConfig in usersConfig.GetChildren())
+                    _logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding user ({errorMessage}).");
+                }
+
+                _config.InitErrorMessages = null;
+            }
+
+            //  Load default users.
+
+            if (_config.DefaultUsers?.Any() ?? false)
+            {
+                foreach (var defaultUser in _config.DefaultUsers)
+                {
+                    try
                     {
-                        try
-                        {
-                            var userName = userConfig.GetValue<string>("UserName");
-                            var passwordHash = userConfig.GetValue<string>("PasswordHash");
-                            var permissionLevelIndex = userConfig.GetValue<int>("PermissionLevel");
-                            var permissionLevel = Enum.IsDefined(typeof(UserPermissionLevel), permissionLevelIndex)
-                                ? (UserPermissionLevel)permissionLevelIndex
-                                : UserPermissionLevel.Guest;
-
-                            if (string.IsNullOrEmpty(userName))
-                                throw new ArgumentException("Invalid default user configuration: UserName cannot be empty.");
-
-                            if (string.IsNullOrEmpty(passwordHash))
-                                throw new ArgumentException("Invalid default user configuration: PasswordHash (SHA256) cannot be empty.");
-
-                            var user = new UserDataModel(null, userName, passwordHash, permissionLevel);
-
-                            _usersDataContext.AddUser(user);
-                            _logger.LogInformation($"{nameof(UsersService)}: Adding default user \"{user.UserName}\".");
-                        }
-                        catch (Exception exc)
-                        {
-                            _logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding user ({exc.Message}).");
-                        }
+                        _usersDataContext.AddUser(defaultUser);
+                    }
+                    catch (Exception exc)
+                    {
+                        _logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding user ({exc.Message}).");
                     }
                 }
-            }
-            catch (Exception)
-            {
-                _logger.LogWarning($"{nameof(UsersService)}: Default users configuration has not been found in appsettings.");
-            }
-            
-            if (!_usersDataContext.HasUsers())
-            {
-                var defaultUser = new UserDataModel(null,
-                    "Administrator",
-                    "fd74bdd901857b89f5737e5352a2a8a2d1f000aa4bed4aee47c95afaa37d0f99", // P@55w0rd
-                    UserPermissionLevel.Administrator);
 
-                _usersDataContext.AddUser(defaultUser);
-                _logger.LogInformation($"{nameof(UsersService)}: Adding default user \"{defaultUser.UserName}\".");
+                _config.DefaultUsers = null;
+            }
+
+            //  Throw exception if no any default user has been loaded.
+
+            if (!_usersDataContext.Users.Any())
+            {
+                throw new Exception("No default user has been defined.");
             }
         }
 

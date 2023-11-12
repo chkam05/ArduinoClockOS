@@ -1,4 +1,3 @@
-
 using ArduinoConnectWeb.Utilities;
 using Microsoft.AspNetCore.Hosting;
 
@@ -6,6 +5,11 @@ namespace ArduinoConnectWeb
 {
     public class Program
     {
+
+        //  VARIABLES
+
+        public static string? URL { get; set; }
+
 
         //  METHODS
 
@@ -18,10 +22,30 @@ namespace ArduinoConnectWeb
         {
             var argsDict = ApplicationUtilities.GetArguments(args);
 
+            if (argsDict.ContainsKey("help"))
+            {
+                ShowHelp();
+                return;
+            }
+
             if (argsDict.ContainsKey("custom"))
                 CreateCustomHostBuilder(argsDict).Build().Run();
             else
                 CreateHostBuilder(args).Build().Run();
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Show application help. </summary>
+        private static void ShowHelp()
+        {
+            Console.WriteLine(" --- ArduinoConnectWeb Help --- ");
+            Console.WriteLine("");
+            Console.WriteLine(" /custom           - use custom configuration. ");
+            Console.WriteLine(" /help             - show help. ");
+            Console.WriteLine(" /host [127.0.0.1] - set application host url (required /custom option). ");
+            Console.WriteLine(" /port [5000]      - set application port (required /custom option). ");
+            Console.WriteLine(" /usehttps         - use HTTPS instead of HTTP (required /custom option). ");
+            Console.WriteLine("");
         }
 
         #endregion APPLICATION METHODS
@@ -52,12 +76,14 @@ namespace ArduinoConnectWeb
             string port = argsDict.ContainsKey("port") ? argsDict["port"] : "5000";
             string protocol = argsDict.ContainsKey("usehttps") ? "https" : "http";
 
+            URL = $"{protocol}://{host}:{port}/";
+
             return Host
                 .CreateDefaultBuilder()
                 .ConfigureWebHostDefaults(webBuilder =>
                 {
                     webBuilder.UseStartup<Startup>();
-                    webBuilder.UseUrls($"{protocol}://{host}:{port}");
+                    webBuilder.UseUrls(URL);
                 });
         }
 
