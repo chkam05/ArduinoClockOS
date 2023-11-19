@@ -350,4 +350,5 @@ MigrationBackup/
 .ionide/
 
 # Custom files
+ArduinoConnectWeb/ArduinoConnectWeb/key_config.json
 ArduinoConnectWeb/ArduinoConnectWeb/users_config.json

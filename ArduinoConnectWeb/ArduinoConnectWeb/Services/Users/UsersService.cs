@@ -1,4 +1,5 @@
 ﻿using ArduinoConnectWeb.DataContexts;
+using ArduinoConnectWeb.Models.Auth;
 using ArduinoConnectWeb.Models.Base;
 using ArduinoConnectWeb.Models.Users;
 using ArduinoConnectWeb.Utilities;
@@ -93,10 +94,13 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Get user by identifier. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<ResponseUserModel>> GetUserById(string id)
+        public async Task<ResponseBaseModel<ResponseUserModel>> GetUserById(string? id)
         {
             return await Task.Run(() =>
             {
+                if (string.IsNullOrEmpty(id))
+                    return new ResponseBaseModel<ResponseUserModel>($"{nameof(id)} cannot be empty.");
+
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
                 if (user is null)
@@ -111,10 +115,13 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Get user by user name. </summary>
         /// <param name="userName"> User name. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<ResponseUserModel>> GetUserByUserName(string userName)
+        public async Task<ResponseBaseModel<ResponseUserModel>> GetUserByUserName(string? userName)
         {
             return await Task.Run(() =>
             {
+                if (string.IsNullOrEmpty(userName))
+                    return new ResponseBaseModel<ResponseUserModel>($"{nameof(userName)} cannot be empty.");
+
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.UserName == userName);
 
                 if (user is null)
@@ -149,15 +156,18 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Remove user by id. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<string>> RemoveUser(string id)
+        public async Task<ResponseBaseModel<string>> RemoveUser(string? id)
         {
             return await Task.Run(() =>
             {
+                if (string.IsNullOrEmpty(id))
+                    return new ResponseBaseModel<string>(errorMessage: $"{nameof(id)} cannot be empty.");
+
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
                 if (user is null)
                     return new ResponseBaseModel<string>(
-                        $"No user with the given \"id\" id was found.");
+                        errorMessage: $"No user with the given \"id\" id was found.");
 
                 try
                 {
@@ -178,15 +188,19 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="id"> User identifier. </param>
         /// <param name="requestUserUpdateModel"></param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<ResponseUserModel>> UpdateUser(string id, RequestUserUpdateModel requestUserUpdateModel)
+        public async Task<ResponseBaseModel<ResponseUserModel>> UpdateUser(string? id, RequestUserUpdateModel requestUserUpdateModel)
         {
             return await Task.Run(() =>
             {
                 var anyChange = false;
+
+                if (string.IsNullOrEmpty(id))
+                    return new ResponseBaseModel<ResponseUserModel>($"{nameof(id)} cannot be empty.");
+
                 var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper())?.CloneWithType();
 
                 if (user is null)
-                    return new ResponseBaseModel<ResponseUserModel>($"No user with the given \"id\" id was found.");
+                    return new ResponseBaseModel<ResponseUserModel>($"No user with the given \"{id}\" id was found.");
 
                 if (!string.IsNullOrEmpty(requestUserUpdateModel.NewUserName))
                 {
@@ -233,6 +247,33 @@ namespace ArduinoConnectWeb.Services.Users
             });
         }
 
+        //  --------------------------------------------------------------------------------
+        /// <summary> Validate user. </summary>
+        /// <param name="userName"> User name. </param>
+        /// <param name="password"> Password. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<ResponseBaseModel<UserDataModel>> ValidateUser(string? userName, string? password)
+        {
+            return await Task.Run(() =>
+            {
+                if (string.IsNullOrEmpty(userName))
+                    return new ResponseBaseModel<UserDataModel>("User name can not be empty.");
+
+                if (string.IsNullOrEmpty(password))
+                    return new ResponseBaseModel<UserDataModel>("Password can not be empty.");
+
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.UserName.ToLower() == userName.ToLower());
+
+                if (user is null)
+                    return new ResponseBaseModel<UserDataModel>("Invalid user name.");
+
+                if (user.PasswordHash != SecurityUtilities.ComputeSha256Hash(password))
+                    return new ResponseBaseModel<UserDataModel>("Invalid password.");
+
+                return new ResponseBaseModel<UserDataModel>(user);
+            });
+        }
+
         #endregion INTERACTION METHODS
 
         #region RESPONSE CREATE METHODS
@@ -243,14 +284,12 @@ namespace ArduinoConnectWeb.Services.Users
         /// <returns> Response user model. </returns>
         private ResponseUserModel GetResponseUserModel(UserDataModel user)
         {
-            return new ResponseUserModel()
-            {
-                Id = user.Id,
-                UserName = user.UserName,
-                PermissionLevel = user.PermissionLevel,
-                CreatedAt = user.CreatedAt,
-                LastModifiedAt = user.LastModifiedAt
-            };
+            return new ResponseUserModel(
+                user.Id,
+                user.UserName,
+                user.PermissionLevel,
+                user.CreatedAt,
+                user.LastModifiedAt);
         }
 
         #endregion RESPONSE CREATE METHODS

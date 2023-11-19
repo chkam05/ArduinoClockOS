@@ -29,6 +29,32 @@ namespace ArduinoConnectWeb.Services
                         Title = $"{configuration["ServiceName"]}V1",
                         Version = "v1",
                     });
+
+                c.AddSecurityDefinition(
+                    name: "Bearer",
+                    securityScheme: new OpenApiSecurityScheme
+                    {
+                        Description = "JWT Authorization header using the Bearer scheme. Example: \"Bearer {token}\"",
+                        Name = "Authorization",
+                        In = ParameterLocation.Header,
+                        Type = SecuritySchemeType.ApiKey
+                    });
+
+                c.AddSecurityRequirement(
+                    securityRequirement: new OpenApiSecurityRequirement
+                    {
+                        {
+                            new OpenApiSecurityScheme
+                            {
+                                Reference = new OpenApiReference
+                                {
+                                    Type = ReferenceType.SecurityScheme,
+                                    Id = "Bearer"
+                                }
+                            },
+                            new string[] { }
+                        }
+                    });
             });
 
             return services;

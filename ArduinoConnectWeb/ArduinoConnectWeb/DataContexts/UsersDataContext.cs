@@ -182,8 +182,8 @@ namespace ArduinoConnectWeb.DataContexts
         //  --------------------------------------------------------------------------------
         /// <summary> Update user by replacing it. </summary>
         /// <param name="user"> User data model to update. </param>
-        /// <exception cref="ArgumentNullException"></exception>
-        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"> One or more parameters are null. </exception>
+        /// <exception cref="ArgumentException"> User does not exist. </exception>
         public void UpdateUser(UserDataModel user)
         {
             if (user is null)

@@ -54,7 +54,7 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="id"> User identifier. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserById")]
-        public async Task<IActionResult> GetUserById([FromQuery] string id)
+        public async Task<IActionResult> GetUserById([FromQuery] string? id)
         {
             if (string.IsNullOrEmpty(id))
                 return new BadRequestObjectResult(new { Message = $"The \"{nameof(id)}\" parameter cannot be empty" });
@@ -71,7 +71,7 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="userName"> User name. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserByUserName")]
-        public async Task<IActionResult> GetUserByUserName([FromQuery] string userName)
+        public async Task<IActionResult> GetUserByUserName([FromQuery] string? userName)
         {
             if (string.IsNullOrEmpty(userName))
                 return new BadRequestObjectResult(new { Message = $"The \"{nameof(userName)}\" parameter cannot be empty" });

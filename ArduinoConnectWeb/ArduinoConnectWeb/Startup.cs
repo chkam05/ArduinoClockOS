@@ -89,6 +89,7 @@ namespace ArduinoConnectWeb
             services.SetupAuthentication(Configuration);
 
             services.RegisterUsersService(Configuration);
+            services.RegisterAuthService(Configuration);
 
             services.AddControllersWithViews();
             services.RegisterSwaggerService(Configuration);

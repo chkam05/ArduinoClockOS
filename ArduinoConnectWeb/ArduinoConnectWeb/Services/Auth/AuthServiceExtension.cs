@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace ArduinoConnectWeb.Services.Auth
 {
@@ -42,7 +43,7 @@ namespace ArduinoConnectWeb.Services.Auth
             {
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
-                    IssuerSigningKey = jwtIssuerSigningKey,
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtIssuerSigningKey)),
                     ValidateAudience = true,
                     ValidateIssuer = true,
                     ValidateIssuerSigningKey = true,
@@ -72,6 +73,10 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Register auth service configuration. </summary>
+        /// <param name="services"> ServiceCollection interface that contains collection of services available in application. </param>
+        /// <param name="configuration"> Application configuration. </param>
+        /// <returns> ServiceCollection interface that contains collection of services available in application. </param>
         private static IServiceCollection RegisterConfiguration(this IServiceCollection services, IConfiguration configuration)
         {
             var applicationUrl = GetApplicationUrl(services, configuration);
@@ -81,11 +86,10 @@ namespace ArduinoConnectWeb.Services.Auth
             var jwtRefreshTokenSize = configuration.GetValue<int?>("Jwt:RefreshTokenSize") ?? 32;
 
             //  Initialize configuration.
-            var config = new AuthServiceConfig()
+            var config = new AuthServiceConfig(jwtIssuerSigningKey)
             {
                 JwtAudience = applicationUrl,
                 JwtIssuer = applicationUrl,
-                JwtKey = SecurityUtilities.EncodeSymmetricSecurityKey(jwtIssuerSigningKey),
                 JwtAccessTokenValidityTime = jwtAccessTokenValidityTime,
                 JwtRefreshTokenValidityTime = jwtRefreshTokenValidityTime,
                 JwtRefreshTokenSize = jwtRefreshTokenSize,
@@ -102,6 +106,26 @@ namespace ArduinoConnectWeb.Services.Auth
         #region UTILITY METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Find launch settings file path. </summary>
+        /// <returns> Launch settings file path or null. </returns>
+        private static string? FindLaunchSettingsPath()
+        {
+            var currentDirectory = Directory.GetCurrentDirectory();
+
+            while (currentDirectory != null)
+            {
+                var launchSettingsPath = Path.Combine(currentDirectory, "Properties", "launchSettings.json");
+
+                if (File.Exists(launchSettingsPath))
+                    return launchSettingsPath;
+
+                currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
+            }
+
+            return null;
+        }
+
+        //  --------------------------------------------------------------------------------
         /// <summary> Get application URL. </summary>
         /// <param name="services"> ServiceCollection interface that contains collection of services available in application. </param>
         /// <returns> Application URL. </returns>
@@ -110,16 +134,33 @@ namespace ArduinoConnectWeb.Services.Auth
             if (!string.IsNullOrEmpty(Program.URL))
                 return Program.URL;
 
-            var environment = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-            var launchSettings = configuration.GetSection($"profiles:{environment}");
-            var applicationUrl = launchSettings["applicationUrl"];
+            var launchSettingsPath = FindLaunchSettingsPath();
 
-            if (!string.IsNullOrEmpty(applicationUrl))
+            if (string.IsNullOrEmpty(launchSettingsPath))
+                throw new FileNotFoundException($"Could not find launch settings file.");
+
+            if (!string.IsNullOrEmpty(launchSettingsPath))
             {
-                if (applicationUrl.Contains(";"))
-                    return applicationUrl.Split(";").First();
-                else
-                    return applicationUrl;
+                LaunchSettings? launchSettings = null;
+
+                try
+                {
+                    var serializedData = File.ReadAllText(launchSettingsPath);
+                    launchSettings = JsonConvert.DeserializeObject<LaunchSettings>(serializedData);
+                }
+                catch (Exception exc)
+                {
+                    throw new Exception($"Launch settings could not be loaded: {exc.Message}.");
+                }
+
+                var applicationUrls = launchSettings?.Profiles?.ArduinoConnectWeb?.ApplicationUrl?
+                        .Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries)
+                        .Select(u => u.Trim());
+
+                if (!(applicationUrls?.Any() ?? false))
+                    throw new Exception("Application URL not found.");
+
+                return applicationUrls.First();
             }
 
             return null;
@@ -129,12 +170,12 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Get jwt issuer signing key. </summary>
         /// <param name="configuration"> Application configuration. </param>
         /// <returns> Symmetric security key. </returns>
-        private static SymmetricSecurityKey GetJwtIssuerSigningKey(IConfiguration configuration)
+        private static string GetJwtIssuerSigningKey(IConfiguration configuration)
         {
             string keysStorageFilePath = configuration["Storage:KeysStorageFile"] ?? DEFAULT_KEYS_FILE_PATH;
 
             KeysStorage? keysStorage = null;
-            SymmetricSecurityKey? symmetricSecurityKey;
+            string? symmetricSecurityKey;
 
             try
             {
@@ -152,14 +193,14 @@ namespace ArduinoConnectWeb.Services.Auth
             if (keysStorage.JwtKey == null)
             {
                 symmetricSecurityKey = SecurityUtilities.GenerateSymmetricSecurityKey();
-                keysStorage.JwtKey = SecurityUtilities.EncodeSymmetricSecurityKey(symmetricSecurityKey);
+                keysStorage.JwtKey = symmetricSecurityKey;
 
                 var keysFileContent = JsonConvert.SerializeObject(keysStorage, Formatting.Indented);
                 File.WriteAllText(keysStorageFilePath, keysFileContent);
             }
             else
             {
-                symmetricSecurityKey = SecurityUtilities.DecodeSymmetricSecurityKey(keysStorage.JwtKey);
+                symmetricSecurityKey = keysStorage.JwtKey;
             }
 
             return symmetricSecurityKey;
