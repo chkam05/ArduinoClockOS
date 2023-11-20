@@ -106,64 +106,28 @@ namespace ArduinoConnectWeb.Services.Auth
         #region UTILITY METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Find launch settings file path. </summary>
-        /// <returns> Launch settings file path or null. </returns>
-        private static string? FindLaunchSettingsPath()
-        {
-            var currentDirectory = Directory.GetCurrentDirectory();
-
-            while (currentDirectory != null)
-            {
-                var launchSettingsPath = Path.Combine(currentDirectory, "Properties", "launchSettings.json");
-
-                if (File.Exists(launchSettingsPath))
-                    return launchSettingsPath;
-
-                currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
-            }
-
-            return null;
-        }
-
-        //  --------------------------------------------------------------------------------
         /// <summary> Get application URL. </summary>
         /// <param name="services"> ServiceCollection interface that contains collection of services available in application. </param>
         /// <returns> Application URL. </returns>
-        private static string? GetApplicationUrl(IServiceCollection services, IConfiguration configuration)
+        private static string GetApplicationUrl(IServiceCollection services, IConfiguration configuration)
         {
             if (!string.IsNullOrEmpty(Program.URL))
                 return Program.URL;
 
-            var launchSettingsPath = FindLaunchSettingsPath();
+            var launchSettings = ApplicationUtilities.GetLaunchSettings();
 
-            if (string.IsNullOrEmpty(launchSettingsPath))
-                throw new FileNotFoundException($"Could not find launch settings file.");
+            if (launchSettings == null)
+                throw new Exception($"Launch settings could not be loaded.");
 
-            if (!string.IsNullOrEmpty(launchSettingsPath))
-            {
-                LaunchSettings? launchSettings = null;
+            var applicationUrl = launchSettings?.Profiles?.ArduinoConnectWeb?.ApplicationUrl?
+                .Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(u => u.Trim())
+                .FirstOrDefault();
 
-                try
-                {
-                    var serializedData = File.ReadAllText(launchSettingsPath);
-                    launchSettings = JsonConvert.DeserializeObject<LaunchSettings>(serializedData);
-                }
-                catch (Exception exc)
-                {
-                    throw new Exception($"Launch settings could not be loaded: {exc.Message}.");
-                }
+            if (string.IsNullOrEmpty(applicationUrl))
+                throw new Exception("Application URL not found in launch settings.");
 
-                var applicationUrls = launchSettings?.Profiles?.ArduinoConnectWeb?.ApplicationUrl?
-                        .Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(u => u.Trim());
-
-                if (!(applicationUrls?.Any() ?? false))
-                    throw new Exception("Application URL not found.");
-
-                return applicationUrls.First();
-            }
-
-            return null;
+            return applicationUrl;
         }
 
         //  --------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 ﻿using ArduinoConnectWeb.Models.Config;
-using ArduinoConnectWeb.Services;
 using ArduinoConnectWeb.Services.Auth;
+using ArduinoConnectWeb.Services.Swagger;
 using ArduinoConnectWeb.Services.Users;
 using ArduinoConnectWeb.Utilities;
 using Microsoft.AspNetCore.Authentication.Cookies;

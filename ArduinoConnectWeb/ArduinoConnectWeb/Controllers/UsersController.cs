@@ -41,7 +41,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.RemoveUser(id);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -62,7 +62,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.GetUserById(id);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -79,7 +79,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.GetUserByUserName(userName);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -92,7 +92,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.GetUsersList();
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -110,7 +110,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.CreateUser(request);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -131,7 +131,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _usersService.UpdateUser(id, request);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 

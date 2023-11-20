@@ -1,5 +1,4 @@
-﻿using ArduinoConnectWeb.Enums;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
 using System.Text;
 

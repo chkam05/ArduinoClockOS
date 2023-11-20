@@ -179,7 +179,7 @@ namespace ArduinoConnectWeb.Services.Users
                     return new ResponseBaseModel<string>(exc.Message);
                 }
 
-                return new ResponseBaseModel<string>(responseData: $"User deleted successfully.");
+                return new ResponseBaseModel<string>(content: $"User deleted successfully.");
             });
         }
 

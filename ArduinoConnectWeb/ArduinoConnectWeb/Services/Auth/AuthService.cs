@@ -93,7 +93,7 @@ namespace ArduinoConnectWeb.Services.Auth
             var userResponse = await _usersService.ValidateUser(
                 requestLoginModel?.UserName, requestLoginModel?.Password);
 
-            if (userResponse.IsSuccess && userResponse.ResponseData is UserDataModel user)
+            if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
             {
                 var accessToken = GenerateAccessToken(user, out DateTime accessTokenValidityTime);
                 var refreshToken = GenerateRefreshToken(out DateTime refreshTokenValidityTime);
@@ -135,7 +135,7 @@ namespace ArduinoConnectWeb.Services.Auth
         {
             var userResponse = await _usersService.GetUserByUserName(requestLogoutModel.UserName);
 
-            if (userResponse.IsSuccess && userResponse.ResponseData is ResponseUserModel responseUserModel)
+            if (userResponse.IsSuccess && userResponse.Content is ResponseUserModel responseUserModel)
             {
                 try
                 {
@@ -160,19 +160,19 @@ namespace ArduinoConnectWeb.Services.Auth
                     if (requestLogoutModel.AllSessions)
                     {
                         sessions.ForEach(_authDataContext.RemoveSession);
-                        return new ResponseBaseModel<string>(responseData: $"Logged out of every session.");
+                        return new ResponseBaseModel<string>(content: $"Logged out of every session.");
                     }
                     else
                     {
                         if (currentSessionFromAccessToken is not null)
                         {
                             _authDataContext.RemoveSession(currentSessionFromAccessToken);
-                            return new ResponseBaseModel<string>(responseData: $"Logged out.");
+                            return new ResponseBaseModel<string>(content: $"Logged out.");
                         }
                         else if (currentSessionFromRefreshToken is not null)
                         {
                             _authDataContext.RemoveSession(currentSessionFromRefreshToken);
-                            return new ResponseBaseModel<string>(responseData: $"Logged out.");
+                            return new ResponseBaseModel<string>(content: $"Logged out.");
                         }
                         else
                         {
@@ -203,7 +203,7 @@ namespace ArduinoConnectWeb.Services.Auth
         {
             var userResponse = await _usersService.GetUserByUserName(requestRefreshModel.UserName);
 
-            if (userResponse.IsSuccess && userResponse.ResponseData is ResponseUserModel responseUserModel)
+            if (userResponse.IsSuccess && userResponse.Content is ResponseUserModel responseUserModel)
             {
                 try
                 {

@@ -1,12 +1,15 @@
-﻿namespace ArduinoConnectWeb.Models.Base
+﻿using Microsoft.AspNetCore.Mvc;
+
+namespace ArduinoConnectWeb.Models.Base
 {
     public class ResponseBaseModel<T> where T : class
     {
 
         //  VARIABLES
 
-        public T? ResponseData { get; set; }
+        public T? Content { get; set; }
         public List<string>? ErrorMessages { get; set; }
+        public int StatusCode { get; set; } = StatusCodes.Status200OK;
 
 
         //  GETTERS & SETTERS
@@ -18,7 +21,7 @@
 
         public bool IsSuccess
         {
-            get => !HasErrors && ResponseData != null;
+            get => !HasErrors && Content != null;
         }
 
 
@@ -35,30 +38,37 @@
 
         //  --------------------------------------------------------------------------------
         /// <summary> ResponseBaseModel class constructor. </summary>
-        /// <param name="responseData"> Response data. </param>
-        public ResponseBaseModel(T? responseData)
+        /// <param name="content"> Response data content. </param>
+        /// <param name="statusCode"> Status code. </param>
+        public ResponseBaseModel(T? content, int statusCode = StatusCodes.Status200OK)
         {
-            ResponseData = responseData;
+            Content = content;
+            StatusCode = statusCode;
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> ResponseBaseModel class constructor. </summary>
         /// <param name="errorMessages"> Enumerable error messages. </param>
-        public ResponseBaseModel(IEnumerable<string> errorMessages)
+        /// <param name="statusCode"> Status code. </param>
+        public ResponseBaseModel(IEnumerable<string> errorMessages, int statusCode = StatusCodes.Status400BadRequest)
         {
             if (errorMessages?.Any() ?? false)
                 ErrorMessages = errorMessages.ToList();
+
+            StatusCode = statusCode;
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> ResponseBaseModel class constructor. </summary>
         /// <param name="errorMessage"> Error message. </param>
-        public ResponseBaseModel(string errorMessage)
+        /// <param name="statusCode"> Status code. </param>
+        public ResponseBaseModel(string errorMessage, int statusCode = StatusCodes.Status400BadRequest)
         {
             if (ErrorMessages == null)
                 ErrorMessages = new List<string>();
 
             ErrorMessages.Add(errorMessage);
+            StatusCode = statusCode;
         }
 
         #endregion CLASS METHODS

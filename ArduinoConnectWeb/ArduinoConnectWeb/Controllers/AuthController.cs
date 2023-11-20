@@ -45,7 +45,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _authService.GetSessions(authorizationHeader);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -63,7 +63,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _authService.Login(requestLoginModel);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -77,7 +77,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _authService.Logout(requestLogoutModel);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 
@@ -91,7 +91,7 @@ namespace ArduinoConnectWeb.Controllers
             var response = await _authService.Refresh(requestRefreshModel);
 
             return response.IsSuccess
-                ? new OkObjectResult(response.ResponseData)
+                ? new OkObjectResult(response.Content)
                 : CreateBadRequestObjectResultFromResponse(response);
         }
 

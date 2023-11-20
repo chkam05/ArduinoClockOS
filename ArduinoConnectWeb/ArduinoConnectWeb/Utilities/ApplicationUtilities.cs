@@ -1,7 +1,15 @@
-﻿namespace ArduinoConnectWeb.Utilities
+﻿using ArduinoConnectWeb.Models.Config;
+using Newtonsoft.Json;
+
+namespace ArduinoConnectWeb.Utilities
 {
     public static class ApplicationUtilities
     {
+
+        //  CONST
+
+        private const string PROPERTIES_FILE_PATH = "Properties\\launchSettings.json";
+
 
         //  METHODS
 
@@ -62,6 +70,56 @@
         }
 
         #endregion ARGUMENTS MANAGEMENT METHODS
+
+        #region CONFIGURATION MANAGEMENT METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Get application launch settings. </summary>
+        /// <returns> Application launch settings. </returns>
+        public static LaunchSettings? GetLaunchSettings()
+        {
+            var launchSettingsPath = FindLaunchSettingsPath();
+
+            if (!string.IsNullOrEmpty(launchSettingsPath))
+            {
+                try
+                {
+                    var serializedData = File.ReadAllText(launchSettingsPath);
+                    var launchSettings = JsonConvert.DeserializeObject<LaunchSettings>(serializedData);
+
+                    if (launchSettings != null)
+                        return launchSettings;
+                }
+                catch (Exception)
+                {
+                    return null;
+                }
+            }
+
+            return null;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Find launch settings file path. </summary>
+        /// <returns> Launch settings file path or null. </returns>
+        private static string? FindLaunchSettingsPath()
+        {
+            var currentDirectory = Directory.GetCurrentDirectory();
+
+            while (currentDirectory != null)
+            {
+                var launchSettingsPath = Path.Combine(currentDirectory, PROPERTIES_FILE_PATH);
+
+                if (File.Exists(launchSettingsPath))
+                    return launchSettingsPath;
+
+                currentDirectory = Directory.GetParent(currentDirectory)?.FullName;
+            }
+
+            return null;
+        }
+
+        #endregion CONFIGURATION MANAGEMENT METHODS
 
     }
 }

@@ -2,7 +2,7 @@
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 
-namespace ArduinoConnectWeb.Services
+namespace ArduinoConnectWeb.Services.Swagger
 {
     public static class SwaggerServiceExtension
     {
@@ -55,6 +55,8 @@ namespace ArduinoConnectWeb.Services
                             new string[] { }
                         }
                     });
+
+                c.DocumentFilter<UnauthorizedMessageFilter>();
             });
 
             return services;
