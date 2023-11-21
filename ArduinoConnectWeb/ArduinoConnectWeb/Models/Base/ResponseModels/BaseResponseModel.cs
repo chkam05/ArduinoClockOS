@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 
-namespace ArduinoConnectWeb.Models.Base
+namespace ArduinoConnectWeb.Models.Base.ResponseModels
 {
-    public class ResponseBaseModel<T> where T : class
+    public class BaseResponseModel<T> where T : class
     {
 
         //  VARIABLES
@@ -31,7 +31,7 @@ namespace ArduinoConnectWeb.Models.Base
 
         //  --------------------------------------------------------------------------------
         /// <summary> ResponseBaseModel class constructor. </summary>
-        public ResponseBaseModel()
+        public BaseResponseModel()
         {
             //
         }
@@ -40,7 +40,7 @@ namespace ArduinoConnectWeb.Models.Base
         /// <summary> ResponseBaseModel class constructor. </summary>
         /// <param name="content"> Response data content. </param>
         /// <param name="statusCode"> Status code. </param>
-        public ResponseBaseModel(T? content, int statusCode = StatusCodes.Status200OK)
+        public BaseResponseModel(T? content, int statusCode = StatusCodes.Status200OK)
         {
             Content = content;
             StatusCode = statusCode;
@@ -50,7 +50,7 @@ namespace ArduinoConnectWeb.Models.Base
         /// <summary> ResponseBaseModel class constructor. </summary>
         /// <param name="errorMessages"> Enumerable error messages. </param>
         /// <param name="statusCode"> Status code. </param>
-        public ResponseBaseModel(IEnumerable<string> errorMessages, int statusCode = StatusCodes.Status400BadRequest)
+        public BaseResponseModel(IEnumerable<string> errorMessages, int statusCode = StatusCodes.Status400BadRequest)
         {
             if (errorMessages?.Any() ?? false)
                 ErrorMessages = errorMessages.ToList();
@@ -62,7 +62,7 @@ namespace ArduinoConnectWeb.Models.Base
         /// <summary> ResponseBaseModel class constructor. </summary>
         /// <param name="errorMessage"> Error message. </param>
         /// <param name="statusCode"> Status code. </param>
-        public ResponseBaseModel(string errorMessage, int statusCode = StatusCodes.Status400BadRequest)
+        public BaseResponseModel(string errorMessage, int statusCode = StatusCodes.Status400BadRequest)
         {
             if (ErrorMessages == null)
                 ErrorMessages = new List<string>();
@@ -82,7 +82,7 @@ namespace ArduinoConnectWeb.Models.Base
         public string? GetErrorMessagesAsOne(string? joinString = null)
         {
             if (ErrorMessages?.Any() ?? false)
-                return string.Join((joinString ?? "; "), ErrorMessages);
+                return string.Join(joinString ?? "; ", ErrorMessages);
 
             return null;
         }

@@ -1,15 +1,6 @@
-﻿namespace ArduinoConnectWeb.Models.Auth
+﻿namespace ArduinoConnectWeb.Models.Auth.ResponseModels
 {
-    public class ResponseSessionsListModel
-    {
-
-        //  VARIABLES
-
-        public List<ResponseSessionsListItemModel>? CurrentSessions { get; set; }
-
-    }
-
-    public class ResponseSessionsListItemModel
+    public class SessionListItemResponseModel
     {
 
         //  VARIABLES
@@ -20,5 +11,4 @@
         public DateTime SessionStart { get; set; }
 
     }
-
 }

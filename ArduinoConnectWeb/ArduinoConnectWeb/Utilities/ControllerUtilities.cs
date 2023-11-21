@@ -1,4 +1,4 @@
-﻿using ArduinoConnectWeb.Models.Base;
+﻿using ArduinoConnectWeb.Models.Base.ResponseModels;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ArduinoConnectWeb.Utilities
@@ -39,7 +39,7 @@ namespace ArduinoConnectWeb.Utilities
         /// <typeparam name="T"> Response data type. </typeparam>
         /// <param name="response"> Data processing response. </param>
         /// <returns> Action result. </returns>
-        public static IActionResult CreateHttpObjectResponse<T>(ResponseBaseModel<T> response) where T : class
+        public static IActionResult CreateHttpObjectResponse<T>(BaseResponseModel<T> response) where T : class
         {
             if (response.IsSuccess)
             {
@@ -68,6 +68,7 @@ namespace ArduinoConnectWeb.Utilities
                 //case StatusCodes.Status100Continue:
                 //case StatusCodes.Status101SwitchingProtocols:
                 //case StatusCodes.Status102Processing:
+                //case StatusCodes.Status201Created:
                 //case StatusCodes.Status202Accepted:
                 //case StatusCodes.Status203NonAuthoritative:
                 //case StatusCodes.Status204NoContent:
@@ -124,10 +125,6 @@ namespace ArduinoConnectWeb.Utilities
 
                 case StatusCodes.Status200OK:
                     result = new Microsoft.AspNetCore.Mvc.OkObjectResult(content);
-                    break;
-
-                case StatusCodes.Status201Created:
-                    result = new Microsoft.AspNetCore.Mvc.CreatedResult("", content);
                     break;
 
                 case StatusCodes.Status400BadRequest:

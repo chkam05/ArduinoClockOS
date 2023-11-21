@@ -1,5 +1,5 @@
-﻿using ArduinoConnectWeb.Models.Auth;
-using ArduinoConnectWeb.Models.Base;
+﻿using ArduinoConnectWeb.Models.Auth.RequestModels;
+using ArduinoConnectWeb.Models.Base.ResponseModels;
 using ArduinoConnectWeb.Services.Auth;
 using ArduinoConnectWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
@@ -41,12 +41,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> GetCurrentSessions()
         {
             var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-
             var response = await _authService.GetSessions(authorizationHeader);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion GET AUTH CONTROLLER METHODS
@@ -58,41 +55,49 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="requestLoginModel"> Request login model. </param>
         /// <returns> Session data or BadRequestObjectResult. </returns>
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromBody] RequestLoginModel requestLoginModel)
+        public async Task<IActionResult> Login([FromBody] LoginRequestModel requestLoginModel)
         {
             var response = await _authService.Login(requestLoginModel);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Logout. </summary>
-        /// <param name="requestLogoutModel"> Request logout model. </param>
         /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpPost("Logout")]
-        public async Task<IActionResult> Logout([FromBody] RequestLogoutModel requestLogoutModel)
+        [Authorize]
+        public async Task<IActionResult> Logout()
         {
-            var response = await _authService.Logout(requestLogoutModel);
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _authService.Logout(authorizationHeader);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Logout. </summary>
+        /// <returns> Success message or BadRequestObjectResult. </returns>
+        [HttpPost("LogoutAllSessions")]
+        [Authorize]
+        public async Task<IActionResult> LogoutAllSessions()
+        {
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _authService.LogoutAllSessions(authorizationHeader);
+
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Refresh tokens. </summary>
-        /// <param name="requestRefreshModel"> Request refresh model. </param>
+        /// <param name="refreshRequestModel"> Refresh request model. </param>
         /// <returns> Session data or BadRequestObjectResult. </returns>
         [HttpPost("Refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RequestRefreshModel requestRefreshModel)
+        public async Task<IActionResult> Refresh([FromBody] RefreshRequestModel refreshRequestModel)
         {
-            var response = await _authService.Refresh(requestRefreshModel);
+            var response = await _authService.Refresh(refreshRequestModel);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion POST AUTH CONTROLLER METHODS
@@ -104,7 +109,7 @@ namespace ArduinoConnectWeb.Controllers
         /// <typeparam name="T"> Response data type. </typeparam>
         /// <param name="response"> Internal response. </param>
         /// <returns> Bad request object result. </returns>
-        private BadRequestObjectResult CreateBadRequestObjectResultFromResponse<T>(ResponseBaseModel<T> response) where T : class
+        private BadRequestObjectResult CreateBadRequestObjectResultFromResponse<T>(BaseResponseModel<T> response) where T : class
         {
             return new BadRequestObjectResult(new
             {

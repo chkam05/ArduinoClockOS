@@ -1,5 +1,7 @@
-﻿using ArduinoConnectWeb.Models.Base;
+﻿using ArduinoConnectWeb.Models.Base.ResponseModels;
 using ArduinoConnectWeb.Models.Users;
+using ArduinoConnectWeb.Models.Users.RequestModels;
+using ArduinoConnectWeb.Models.Users.ResponseModels;
 
 namespace ArduinoConnectWeb.Services.Users
 {
@@ -8,13 +10,14 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  METHODS
 
-        public Task<ResponseBaseModel<ResponseUserModel>> CreateUser(RequestUserCreateModel requestUserCreateModel);
-        public Task<ResponseBaseModel<ResponseUserModel>> GetUserById(string? id);
-        public Task<ResponseBaseModel<ResponseUserModel>> GetUserByUserName(string? userName);
-        public Task<ResponseBaseModel<ResponseUsersListModel>> GetUsersList();
-        public Task<ResponseBaseModel<string>> RemoveUser(string? id);
-        public Task<ResponseBaseModel<ResponseUserModel>> UpdateUser(string? id, RequestUserUpdateModel requestUserUpdateModel);
-        public Task<ResponseBaseModel<UserDataModel>> ValidateUser(string? userName, string? password);
+        public Task<BaseResponseModel<UserResponseModel>> CreateUser(string? accessToken, CreateUserRequestModel requestUserCreateModel);
+        public Task<BaseResponseModel<UserResponseModel>> GetUserById(string? accessToken, string? id);
+        public Task<BaseResponseModel<UserResponseModel>> GetUserById(string? id);
+        public Task<BaseResponseModel<UserResponseModel>> GetUserByUserName(string? accessToken, string? userName);
+        public Task<BaseResponseModel<UserListResponseModel>> GetUsersList(string? accessToken);
+        public Task<BaseResponseModel<string>> RemoveUser(string? accessToken, string? id);
+        public Task<BaseResponseModel<UserResponseModel>> UpdateUser(string? accessToken, string? id, UpdateUserRequestModel requestUserUpdateModel);
+        public Task<BaseResponseModel<UserDataModel>> ValidateUser(string? userName, string? password);
 
     }
 }

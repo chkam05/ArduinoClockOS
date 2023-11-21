@@ -1,6 +1,8 @@
-﻿using ArduinoConnectWeb.Models.Base;
-using ArduinoConnectWeb.Models.Users;
+﻿using ArduinoConnectWeb.Models.Base.ResponseModels;
+using ArduinoConnectWeb.Models.Users.RequestModels;
 using ArduinoConnectWeb.Services.Users;
+using ArduinoConnectWeb.Utilities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ArduinoConnectWeb.Controllers
@@ -36,13 +38,13 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="id"> User identifier. </param>
         /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpDelete("DeleteUser")]
+        [Authorize]
         public async Task<IActionResult> DeleteUser([FromQuery] string id)
         {
-            var response = await _usersService.RemoveUser(id);
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.RemoveUser(authorizationHeader, id);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion DELETE USER CONTROLLER METHODS
@@ -54,16 +56,13 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="id"> User identifier. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserById")]
-        public async Task<IActionResult> GetUserById([FromQuery] string? id)
+        [Authorize]
+        public async Task<IActionResult> GetUserById([FromQuery] string id)
         {
-            if (string.IsNullOrEmpty(id))
-                return new BadRequestObjectResult(new { Message = $"The \"{nameof(id)}\" parameter cannot be empty" });
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.GetUserById(authorizationHeader, id);
 
-            var response = await _usersService.GetUserById(id);
-
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         //  --------------------------------------------------------------------------------
@@ -71,29 +70,26 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="userName"> User name. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserByUserName")]
-        public async Task<IActionResult> GetUserByUserName([FromQuery] string? userName)
+        [Authorize]
+        public async Task<IActionResult> GetUserByUserName([FromQuery] string userName)
         {
-            if (string.IsNullOrEmpty(userName))
-                return new BadRequestObjectResult(new { Message = $"The \"{nameof(userName)}\" parameter cannot be empty" });
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.GetUserByUserName(authorizationHeader, userName);
 
-            var response = await _usersService.GetUserByUserName(userName);
-
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get users list. </summary>
         /// <returns> Users list or BadRequestObjectResult. </returns>
         [HttpGet("GetUsersList")]
+        [Authorize]
         public async Task<IActionResult> GetUsersList()
         {
-            var response = await _usersService.GetUsersList();
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.GetUsersList(authorizationHeader);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion GET USER CONTROLLER METHODS
@@ -105,13 +101,13 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="request"> Request user create model. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPost("CreateUser")]
-        public async Task<IActionResult> CreateUser([FromBody] RequestUserCreateModel request)
+        [Authorize]
+        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestModel request)
         {
-            var response = await _usersService.CreateUser(request);
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.CreateUser(authorizationHeader, request);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion POST USER CONTROLLER METHODS
@@ -124,15 +120,15 @@ namespace ArduinoConnectWeb.Controllers
         /// <param name="request"> Request user update model. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPatch("UpdateUser")]
+        [Authorize]
         public async Task<IActionResult> UpdateUser(
             [FromQuery] string id,
-            [FromBody] RequestUserUpdateModel request)
+            [FromBody] UpdateUserRequestModel request)
         {
-            var response = await _usersService.UpdateUser(id, request);
+            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _usersService.UpdateUser(authorizationHeader, id, request);
 
-            return response.IsSuccess
-                ? new OkObjectResult(response.Content)
-                : CreateBadRequestObjectResultFromResponse(response);
+            return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
         #endregion UPDATE USER CONTROLLER METHODS
@@ -144,7 +140,7 @@ namespace ArduinoConnectWeb.Controllers
         /// <typeparam name="T"> Response data type. </typeparam>
         /// <param name="response"> Internal response. </param>
         /// <returns> Bad request object result. </returns>
-        private BadRequestObjectResult CreateBadRequestObjectResultFromResponse<T>(ResponseBaseModel<T> response) where T : class
+        private BadRequestObjectResult CreateBadRequestObjectResultFromResponse<T>(BaseResponseModel<T> response) where T : class
         {
             return new BadRequestObjectResult(new
             {

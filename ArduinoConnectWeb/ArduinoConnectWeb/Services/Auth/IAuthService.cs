@@ -1,5 +1,7 @@
 ﻿using ArduinoConnectWeb.Models.Auth;
-using ArduinoConnectWeb.Models.Base;
+using ArduinoConnectWeb.Models.Auth.RequestModels;
+using ArduinoConnectWeb.Models.Auth.ResponseModels;
+using ArduinoConnectWeb.Models.Base.ResponseModels;
 
 namespace ArduinoConnectWeb.Services.Auth
 {
@@ -8,10 +10,11 @@ namespace ArduinoConnectWeb.Services.Auth
 
         //  METHODS
 
-        public Task<ResponseBaseModel<ResponseSessionsListModel>> GetSessions(string? accessToken);
-        public Task<ResponseBaseModel<SessionDataModel>> Login(RequestLoginModel requestLoginModel);
-        public Task<ResponseBaseModel<string>> Logout(RequestLogoutModel requestLogoutModel);
-        public Task<ResponseBaseModel<SessionDataModel>> Refresh(RequestRefreshModel requestRefreshModel);
+        public Task<BaseResponseModel<SessionListResponseModel>> GetSessions(string? accessToken);
+        public Task<BaseResponseModel<SessionDataModel>> Login(LoginRequestModel loginRequestModel);
+        public Task<BaseResponseModel<string>> Logout(string? accessToken);
+        public Task<BaseResponseModel<string>> LogoutAllSessions(string? accessToken);
+        public Task<BaseResponseModel<SessionDataModel>> Refresh(RefreshRequestModel refreshRequestModel);
 
     }
 }

@@ -99,6 +99,18 @@ namespace ArduinoConnectWeb.DataContexts
         }
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Remove sessions. </summary>
+        /// <param name="sessions"> Sessions collection to remove. </param>
+        /// <exception cref="ArgumentNullException"> One or more parameters are null. </exception>
+        public void RemoveSessions(IEnumerable<SessionDataModel> sessions)
+        {
+            if (sessions is null)
+                throw new ArgumentNullException($"{nameof(sessions)} parameter is null.");
+
+            Sessions.RemoveAll(s => sessions.Contains(s));
+        }
+
+        //  --------------------------------------------------------------------------------
         /// <summary> Update session by replacing it. </summary>
         /// <param name="session"> Session data model to update. </param>
         /// <exception cref="ArgumentNullException"> One or more parameters are null. </exception>

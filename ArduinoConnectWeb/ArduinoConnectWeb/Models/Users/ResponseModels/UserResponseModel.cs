@@ -1,6 +1,6 @@
-﻿namespace ArduinoConnectWeb.Models.Users
+﻿namespace ArduinoConnectWeb.Models.Users.ResponseModels
 {
-    public class ResponseUserModel
+    public class UserResponseModel
     {
 
         //  VARIABLES
@@ -17,7 +17,7 @@
         #region CLASS METHODS
 
         //  --------------------------------------------------------------------------------
-        public ResponseUserModel(string id, string userName, UserPermissionLevel permissionLevel,
+        public UserResponseModel(string id, string userName, UserPermissionLevel permissionLevel,
             DateTime createdAt, DateTime lastModifiedAt)
         {
             Id = id;

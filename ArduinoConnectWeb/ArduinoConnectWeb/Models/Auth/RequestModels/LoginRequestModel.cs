@@ -1,6 +1,6 @@
-﻿namespace ArduinoConnectWeb.Models.Auth
+﻿namespace ArduinoConnectWeb.Models.Auth.RequestModels
 {
-    public class RequestLoginModel
+    public class LoginRequestModel
     {
 
         //  VARIABLES

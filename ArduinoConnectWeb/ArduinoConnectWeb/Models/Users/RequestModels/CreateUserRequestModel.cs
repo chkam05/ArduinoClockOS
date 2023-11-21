@@ -1,6 +1,6 @@
-﻿namespace ArduinoConnectWeb.Models.Users
+﻿namespace ArduinoConnectWeb.Models.Users.RequestModels
 {
-    public class RequestUserCreateModel
+    public class CreateUserRequestModel
     {
 
         //  VARIABLES

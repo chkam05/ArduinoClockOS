@@ -1,7 +1,11 @@
 ﻿using ArduinoConnectWeb.DataContexts;
 using ArduinoConnectWeb.Models.Auth;
-using ArduinoConnectWeb.Models.Base;
+using ArduinoConnectWeb.Models.Auth.RequestModels;
+using ArduinoConnectWeb.Models.Auth.ResponseModels;
+using ArduinoConnectWeb.Models.Base.ResponseModels;
+using ArduinoConnectWeb.Models.Exceptions;
 using ArduinoConnectWeb.Models.Users;
+using ArduinoConnectWeb.Models.Users.ResponseModels;
 using ArduinoConnectWeb.Services.Users;
 using Microsoft.IdentityModel.Tokens;
 using System.Drawing;
@@ -48,25 +52,28 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Get current user sessions. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<ResponseSessionsListModel>> GetSessions(string? accessToken)
+        public async Task<BaseResponseModel<SessionListResponseModel>> GetSessions(string? accessToken)
         {
             return await Task.Run(() =>
             {
                 try
                 {
+                    if (string.IsNullOrEmpty(accessToken))
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+
                     var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
 
                     if (session is null)
-                        return new ResponseBaseModel<ResponseSessionsListModel>("Incorrect authorization, access denied.");
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
 
                     if (!session.IsAccessTokenValid())
-                        return new ResponseBaseModel<ResponseSessionsListModel>("Access token has expired, access denied.");
+                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
 
                     var allUserSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId).ToList();
 
-                    var result = new ResponseSessionsListModel()
+                    var result = new SessionListResponseModel()
                     {
-                        CurrentSessions = allUserSessions?.Select(s => new ResponseSessionsListItemModel()
+                        CurrentSessions = allUserSessions?.Select(s => new SessionListItemResponseModel()
                         {
                             AccessTokenValidityTime = s.AccessTokenValidityTime,
                             RefreshTokenValidityTime = s.RefreshTokenValidityTime,
@@ -75,179 +82,204 @@ namespace ArduinoConnectWeb.Services.Auth
                         }).ToList()
                     };
 
-                    return new ResponseBaseModel<ResponseSessionsListModel>(result);
+                    return new BaseResponseModel<SessionListResponseModel>(result);
+                }
+                catch (ProcessingException exc)
+                {
+                    return new BaseResponseModel<SessionListResponseModel>(exc.Message, exc.StatusCode);
                 }
                 catch (Exception exc)
                 {
-                    return new ResponseBaseModel<ResponseSessionsListModel>(errorMessage: $"Authorization failed : {exc.Message}.");
+                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
+
+                    return new BaseResponseModel<SessionListResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
                 }
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Login. </summary>
-        /// <param name="requestLoginModel"> Request login model. </param>
+        /// <param name="loginRequestModel"> Login request model. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<SessionDataModel>> Login(RequestLoginModel requestLoginModel)
+        public async Task<BaseResponseModel<SessionDataModel>> Login(LoginRequestModel loginRequestModel)
         {
-            var userResponse = await _usersService.ValidateUser(
-                requestLoginModel?.UserName, requestLoginModel?.Password);
-
-            if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
+            try
             {
-                var accessToken = GenerateAccessToken(user, out DateTime accessTokenValidityTime);
-                var refreshToken = GenerateRefreshToken(out DateTime refreshTokenValidityTime);
+                var userResponse = await _usersService.ValidateUser(
+                    loginRequestModel?.UserName, loginRequestModel?.Password);
 
-                var session = new SessionDataModel(
-                    null,
-                    user.Id,
-                    accessToken,
-                    refreshToken,
-                    accessTokenValidityTime,
-                    refreshTokenValidityTime);
-
-                try
+                if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
                 {
+                    var accessToken = GenerateAccessToken(user, out DateTime accessTokenValidityTime);
+                    var refreshToken = GenerateRefreshToken(out DateTime refreshTokenValidityTime);
+
+                    var session = new SessionDataModel(
+                        null,
+                        user.Id,
+                        accessToken,
+                        refreshToken,
+                        accessTokenValidityTime,
+                        refreshTokenValidityTime);
+
                     _authDataContext.AddSession(session);
 
-                    return new ResponseBaseModel<SessionDataModel>(session);
+                    return new BaseResponseModel<SessionDataModel>(session);
                 }
-                catch (Exception exc)
+                else if (userResponse.ErrorMessages?.Any() ?? false)
                 {
-                    return new ResponseBaseModel<SessionDataModel>($"The session could not be started: {exc.Message}.");
+                    var message = userResponse.GetErrorMessagesAsOne() ?? "The session cannot be started";
+                    throw new ProcessingException(message, StatusCodes.Status400BadRequest);
+                }
+                else
+                {
+                    throw new ProcessingException("The session cannot be started", StatusCodes.Status400BadRequest);
                 }
             }
-            else if (userResponse.ErrorMessages?.Any() ?? false)
+            catch (ProcessingException exc)
             {
-                return new ResponseBaseModel<SessionDataModel>(userResponse.ErrorMessages);
+                return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
             }
-            else
+            catch (Exception exc)
             {
-                return new ResponseBaseModel<SessionDataModel>("An unknown error occurred while processing data.");
+                return new BaseResponseModel<SessionDataModel>($"An unknown error occurred while processing data: {exc.Message}");
             }
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Logout. </summary>
-        /// <param name="requestLogoutModel"> Request logout model. </param>
+        /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<string>> Logout(RequestLogoutModel requestLogoutModel)
+        public async Task<BaseResponseModel<string>> Logout(string? accessToken)
         {
-            var userResponse = await _usersService.GetUserByUserName(requestLogoutModel.UserName);
-
-            if (userResponse.IsSuccess && userResponse.Content is ResponseUserModel responseUserModel)
+            return await Task.Run(() =>
             {
                 try
                 {
-                    var sessions = _authDataContext.Sessions.Where(s => s.UserId == responseUserModel.Id)?.ToList();
+                    if (string.IsNullOrEmpty(accessToken))
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
 
-                    if (!(sessions?.Any() ?? false))
-                        return new ResponseBaseModel<string>(errorMessage: $"User \"{requestLogoutModel.UserName}\" is not logged in.");
+                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
 
-                    var currentSessionFromAccessToken = sessions.FirstOrDefault(s 
-                        => s.AccessToken == requestLogoutModel.AccessToken && s.IsAccessTokenValid());
+                    if (session is null)
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
 
-                    var currentSessionFromRefreshToken = sessions.FirstOrDefault(s 
-                        => s.RefreshToken == requestLogoutModel.RefreshToken && s.IsRefreshTokenValid());
+                    if (!session.IsAccessTokenValid())
+                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
 
-                    if (currentSessionFromAccessToken is null && currentSessionFromRefreshToken is null)
-                        return new ResponseBaseModel<string>(errorMessage: "Invalid tokens.");
+                    _authDataContext.RemoveSession(session);
 
-                    if (currentSessionFromAccessToken is not null && currentSessionFromRefreshToken is not null
-                        && !currentSessionFromAccessToken.Equals(currentSessionFromRefreshToken))
-                        return new ResponseBaseModel<string>(errorMessage: "Different session tokens has been used.");
-
-                    if (requestLogoutModel.AllSessions)
-                    {
-                        sessions.ForEach(_authDataContext.RemoveSession);
-                        return new ResponseBaseModel<string>(content: $"Logged out of every session.");
-                    }
-                    else
-                    {
-                        if (currentSessionFromAccessToken is not null)
-                        {
-                            _authDataContext.RemoveSession(currentSessionFromAccessToken);
-                            return new ResponseBaseModel<string>(content: $"Logged out.");
-                        }
-                        else if (currentSessionFromRefreshToken is not null)
-                        {
-                            _authDataContext.RemoveSession(currentSessionFromRefreshToken);
-                            return new ResponseBaseModel<string>(content: $"Logged out.");
-                        }
-                        else
-                        {
-                            return new ResponseBaseModel<string>(errorMessage: "An unknown error occurred while processing data.");
-                        }
-                    }
+                    return new BaseResponseModel<string>(content: $"Logged out");
+                }
+                catch (ProcessingException exc)
+                {
+                    return new BaseResponseModel<string>(exc.Message, exc.StatusCode);
                 }
                 catch (Exception exc)
                 {
-                    return new ResponseBaseModel<string>(errorMessage: $"Unable to logout user \"{requestLogoutModel.UserName}\": {exc.Message}.");
+                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
+                    return new BaseResponseModel<string>(errorMessage, StatusCodes.Status400BadRequest);
                 }
-            }
-            else if (userResponse.ErrorMessages?.Any() ?? false)
+            });
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Logout from all sessions. </summary>
+        /// <param name="accessToken"> Access token. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<BaseResponseModel<string>> LogoutAllSessions(string? accessToken)
+        {
+            return await Task.Run(() =>
             {
-                return new ResponseBaseModel<string>(userResponse.ErrorMessages);
-            }
-            else
-            {
-                return new ResponseBaseModel<string>(errorMessage: "An unknown error occurred while processing data.");
-            }
+                try
+                {
+                    if (string.IsNullOrEmpty(accessToken))
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+
+                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
+
+                    if (session is null)
+                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+
+                    if (!session.IsAccessTokenValid())
+                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
+
+                    var allSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId);
+
+                    if (allSessions.Any())
+                        _authDataContext.RemoveSessions(allSessions);
+
+                    return new BaseResponseModel<string>(content: $"Logged out");
+                }
+                catch (ProcessingException exc)
+                {
+                    return new BaseResponseModel<string>(exc.Message, exc.StatusCode);
+                }
+                catch (Exception exc)
+                {
+                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
+                    return new BaseResponseModel<string>(errorMessage, StatusCodes.Status400BadRequest);
+                }
+            });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Refresh tokens. </summary>
-        /// <param name="requestRefreshModel"> Request refresh model. </param>
+        /// <param name="refreshRequestModel"> Refresh request model. </param>
         /// <returns> Response view model. </returns>
-        public async Task<ResponseBaseModel<SessionDataModel>> Refresh(RequestRefreshModel requestRefreshModel)
+        public async Task<BaseResponseModel<SessionDataModel>> Refresh(RefreshRequestModel refreshRequestModel)
         {
-            var userResponse = await _usersService.GetUserByUserName(requestRefreshModel.UserName);
-
-            if (userResponse.IsSuccess && userResponse.Content is ResponseUserModel responseUserModel)
+            try
             {
-                try
+                if (string.IsNullOrEmpty(refreshRequestModel.RefreshToken))
+                    throw new ProcessingException("Invalid RefreshToken", StatusCodes.Status401Unauthorized);
+
+                var session = _authDataContext.Sessions.FirstOrDefault(s => s.RefreshToken == refreshRequestModel.RefreshToken);
+
+                if (session is null)
+                    throw new ProcessingException("Invalid RefreshToken", StatusCodes.Status401Unauthorized);
+
+                if (!session.IsRefreshTokenValid())
                 {
-                    var sessions = _authDataContext.Sessions.Where(s => s.UserId == responseUserModel.Id);
+                    _authDataContext.RemoveSession(session);
+                    throw new ProcessingException("Session expired", StatusCodes.Status401Unauthorized);
+                }
 
-                    if (!sessions.Any())
-                        return new ResponseBaseModel<SessionDataModel>($"User \"{requestRefreshModel.UserName}\" is not logged in.");
+                var userResponse = await _usersService.GetUserById(session.UserId);
 
-                    var currentSession = sessions.FirstOrDefault(s => s.RefreshToken == requestRefreshModel.RefreshToken);
-
-                    if (currentSession is null)
-                        return new ResponseBaseModel<SessionDataModel>($"Invalid {nameof(requestRefreshModel.RefreshToken)}.");
-
-                    if (!currentSession.IsRefreshTokenValid())
-                    {
-                        _authDataContext.RemoveSession(currentSession);
-                        return new ResponseBaseModel<SessionDataModel>($"Session expired.");
-                    }
-
+                if (userResponse.IsSuccess && userResponse.Content is UserResponseModel responseUserModel)
+                {
                     var user = responseUserModel.ConvertToUserDataModel();
 
                     var newAccessToken = GenerateAccessToken(user, out DateTime newAccessTokenValidityTime);
                     var newRefreshToken = GenerateRefreshToken(out DateTime newRefreshTokenValidityTime);
 
-                    currentSession.AccessToken = newAccessToken;
-                    currentSession.RefreshToken = newRefreshToken;
-                    currentSession.AccessTokenValidityTime = newAccessTokenValidityTime;
-                    currentSession.RefreshTokenValidityTime = newRefreshTokenValidityTime;
+                    session.AccessToken = newAccessToken;
+                    session.RefreshToken = newRefreshToken;
+                    session.AccessTokenValidityTime = newAccessTokenValidityTime;
+                    session.RefreshTokenValidityTime = newRefreshTokenValidityTime;
 
-                    _authDataContext.UpdateSession(currentSession);
-                    return new ResponseBaseModel<SessionDataModel>(currentSession);
+                    _authDataContext.UpdateSession(session);
+
+                    return new BaseResponseModel<SessionDataModel>(session);
                 }
-                catch (Exception exc)
+                else if (userResponse.ErrorMessages?.Any() ?? false)
                 {
-                    return new ResponseBaseModel<SessionDataModel>($"Unable to refresh token: {exc.Message}.");
+                    var message = userResponse.GetErrorMessagesAsOne() ?? "Token cannot be refreshed";
+                    throw new ProcessingException(message, StatusCodes.Status400BadRequest);
+                }
+                else
+                {
+                    throw new ProcessingException("Token cannot be refreshed", StatusCodes.Status400BadRequest);
                 }
             }
-            else if (userResponse.ErrorMessages?.Any() ?? false)
+            catch (ProcessingException exc)
             {
-                return new ResponseBaseModel<SessionDataModel>(userResponse.ErrorMessages);
+                return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
             }
-            else
+            catch (Exception exc)
             {
-                return new ResponseBaseModel<SessionDataModel>("An unknown error occurred while processing data.");
+                var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
+                return new BaseResponseModel<SessionDataModel>(errorMessage, StatusCodes.Status400BadRequest);
             }
         }
 
