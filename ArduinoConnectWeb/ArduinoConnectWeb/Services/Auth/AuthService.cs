@@ -6,9 +6,9 @@ using ArduinoConnectWeb.Models.Base.ResponseModels;
 using ArduinoConnectWeb.Models.Exceptions;
 using ArduinoConnectWeb.Models.Users;
 using ArduinoConnectWeb.Models.Users.ResponseModels;
+using ArduinoConnectWeb.Services.Base;
 using ArduinoConnectWeb.Services.Users;
 using Microsoft.IdentityModel.Tokens;
-using System.Drawing;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
@@ -16,7 +16,7 @@ using System.Text;
 
 namespace ArduinoConnectWeb.Services.Auth
 {
-    public class AuthService : IAuthService
+    public class AuthService : DataProcessor, IAuthService
     {
 
         //  VARIABLES
@@ -49,51 +49,100 @@ namespace ArduinoConnectWeb.Services.Auth
         #region INTERACTION METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> Authorize. </summary>
+        /// <param name="accessToken"> Access token. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<BaseResponseModel<SessionDataModel>> AuthorizeAsync(string? accessToken)
+        {
+            return await ProcessAsync(() =>
+            {
+                if (string.IsNullOrEmpty(accessToken))
+                    throw new UnauthorizedException("Invalid AccessToken");
+
+                var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
+
+                if (session is null)
+                    throw new UnauthorizedException("Invalid AccessToken");
+
+                if (!session.IsAccessTokenValid())
+                    throw new UnauthorizedException("AccessToken expired");
+
+                return new BaseResponseModel<SessionDataModel>(session);
+            });
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Refresh tokens. </summary>
+        /// <param name="refreshRequestModel"> Refresh request model. </param>
+        /// <returns> Response view model. </returns>
+        public async Task<BaseResponseModel<SessionDataModel>> RefreshAsync(RefreshRequestModel refreshRequestModel)
+        {
+            return await ProcessTaskAsync(async () =>
+            {
+                if (string.IsNullOrEmpty(refreshRequestModel.RefreshToken))
+                    throw new UnauthorizedException("Invalid RefreshToken");
+
+                var session = _authDataContext.Sessions.FirstOrDefault(s => s.RefreshToken == refreshRequestModel.RefreshToken);
+
+                if (session is null)
+                    throw new UnauthorizedException("Invalid RefreshToken");
+
+                if (!session.IsRefreshTokenValid())
+                {
+                    _authDataContext.RemoveSession(session);
+                    throw new UnauthorizedException("Session expired");
+                }
+
+                var userResponse = await _usersService.GetUserByIdAsync(session.UserId);
+
+                if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
+                {
+                    var newAccessToken = GenerateAccessToken(user, out DateTime newAccessTokenValidityTime);
+                    var newRefreshToken = GenerateRefreshToken(out DateTime newRefreshTokenValidityTime);
+
+                    session.AccessToken = newAccessToken;
+                    session.RefreshToken = newRefreshToken;
+                    session.AccessTokenValidityTime = newAccessTokenValidityTime;
+                    session.RefreshTokenValidityTime = newRefreshTokenValidityTime;
+
+                    _authDataContext.UpdateSession(session);
+
+                    return new BaseResponseModel<SessionDataModel>(session);
+                }
+                else if (userResponse.ErrorMessages?.Any() ?? false)
+                {
+                    var message = userResponse.GetErrorMessagesAsOne() ?? "Token cannot be refreshed";
+                    throw new ProcessingException(message, StatusCodes.Status400BadRequest);
+                }
+                else
+                {
+                    throw new ProcessingException("Token cannot be refreshed", StatusCodes.Status400BadRequest);
+                }
+            });
+        }
+
+        //  --------------------------------------------------------------------------------
         /// <summary> Get current user sessions. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<SessionListResponseModel>> GetSessions(string? accessToken)
+        public async Task<BaseResponseModel<SessionListResponseModel>> GetSessionsAsync(string? accessToken)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
             {
-                try
+                var allUserSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId).ToList();
+
+                var result = new SessionListResponseModel()
                 {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
-
-                    if (session is null)
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    if (!session.IsAccessTokenValid())
-                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
-
-                    var allUserSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId).ToList();
-
-                    var result = new SessionListResponseModel()
+                    CurrentSessions = allUserSessions?.Select(s => new SessionListItemResponseModel()
                     {
-                        CurrentSessions = allUserSessions?.Select(s => new SessionListItemResponseModel()
-                        {
-                            AccessTokenValidityTime = s.AccessTokenValidityTime,
-                            RefreshTokenValidityTime = s.RefreshTokenValidityTime,
-                            SessionStart = s.SessionStart,
-                            UserId = s.UserId
-                        }).ToList()
-                    };
+                        AccessTokenValidityTime = s.AccessTokenValidityTime,
+                        RefreshTokenValidityTime = s.RefreshTokenValidityTime,
+                        SessionStart = s.SessionStart,
+                        UserId = s.UserId
+                    }).ToList()
+                };
 
-                    return new BaseResponseModel<SessionListResponseModel>(result);
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<SessionListResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<SessionListResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<SessionListResponseModel>(result);
             });
         }
 
@@ -101,11 +150,11 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Login. </summary>
         /// <param name="loginRequestModel"> Login request model. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<SessionDataModel>> Login(LoginRequestModel loginRequestModel)
+        public async Task<BaseResponseModel<SessionDataModel>> LoginAsync(LoginRequestModel loginRequestModel)
         {
-            try
+            return await ProcessTaskAsync<SessionDataModel>(async () =>
             {
-                var userResponse = await _usersService.ValidateUser(
+                var userResponse = await _usersService.ValidateUserAsync(
                     loginRequestModel?.UserName, loginRequestModel?.Password);
 
                 if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
@@ -134,51 +183,20 @@ namespace ArduinoConnectWeb.Services.Auth
                 {
                     throw new ProcessingException("The session cannot be started", StatusCodes.Status400BadRequest);
                 }
-            }
-            catch (ProcessingException exc)
-            {
-                return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
-            }
-            catch (Exception exc)
-            {
-                return new BaseResponseModel<SessionDataModel>($"An unknown error occurred while processing data: {exc.Message}");
-            }
+            });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Logout. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> Logout(string? accessToken)
+        public async Task<BaseResponseModel<string>> LogoutAsync(string? accessToken)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                _authDataContext.RemoveSession(session);
 
-                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
-
-                    if (session is null)
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    if (!session.IsAccessTokenValid())
-                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
-
-                    _authDataContext.RemoveSession(session);
-
-                    return new BaseResponseModel<string>(content: $"Logged out");
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<string>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-                    return new BaseResponseModel<string>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<string>(content: $"Logged out");
             });
         }
 
@@ -186,101 +204,14 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Logout from all sessions. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> LogoutAllSessions(string? accessToken)
+        public async Task<BaseResponseModel<string>> LogoutAllSessionsAsync(string? accessToken)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                var allSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId);
 
-                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
-
-                    if (session is null)
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    if (!session.IsAccessTokenValid())
-                        throw new ProcessingException("AccessToken expired", StatusCodes.Status401Unauthorized);
-
-                    var allSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId);
-
-                    if (allSessions.Any())
-                        _authDataContext.RemoveSessions(allSessions);
-
-                    return new BaseResponseModel<string>(content: $"Logged out");
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<string>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-                    return new BaseResponseModel<string>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<string>(content: $"Logged out");
             });
-        }
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Refresh tokens. </summary>
-        /// <param name="refreshRequestModel"> Refresh request model. </param>
-        /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<SessionDataModel>> Refresh(RefreshRequestModel refreshRequestModel)
-        {
-            try
-            {
-                if (string.IsNullOrEmpty(refreshRequestModel.RefreshToken))
-                    throw new ProcessingException("Invalid RefreshToken", StatusCodes.Status401Unauthorized);
-
-                var session = _authDataContext.Sessions.FirstOrDefault(s => s.RefreshToken == refreshRequestModel.RefreshToken);
-
-                if (session is null)
-                    throw new ProcessingException("Invalid RefreshToken", StatusCodes.Status401Unauthorized);
-
-                if (!session.IsRefreshTokenValid())
-                {
-                    _authDataContext.RemoveSession(session);
-                    throw new ProcessingException("Session expired", StatusCodes.Status401Unauthorized);
-                }
-
-                var userResponse = await _usersService.GetUserById(session.UserId);
-
-                if (userResponse.IsSuccess && userResponse.Content is UserResponseModel responseUserModel)
-                {
-                    var user = responseUserModel.ConvertToUserDataModel();
-
-                    var newAccessToken = GenerateAccessToken(user, out DateTime newAccessTokenValidityTime);
-                    var newRefreshToken = GenerateRefreshToken(out DateTime newRefreshTokenValidityTime);
-
-                    session.AccessToken = newAccessToken;
-                    session.RefreshToken = newRefreshToken;
-                    session.AccessTokenValidityTime = newAccessTokenValidityTime;
-                    session.RefreshTokenValidityTime = newRefreshTokenValidityTime;
-
-                    _authDataContext.UpdateSession(session);
-
-                    return new BaseResponseModel<SessionDataModel>(session);
-                }
-                else if (userResponse.ErrorMessages?.Any() ?? false)
-                {
-                    var message = userResponse.GetErrorMessagesAsOne() ?? "Token cannot be refreshed";
-                    throw new ProcessingException(message, StatusCodes.Status400BadRequest);
-                }
-                else
-                {
-                    throw new ProcessingException("Token cannot be refreshed", StatusCodes.Status400BadRequest);
-                }
-            }
-            catch (ProcessingException exc)
-            {
-                return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
-            }
-            catch (Exception exc)
-            {
-                var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-                return new BaseResponseModel<SessionDataModel>(errorMessage, StatusCodes.Status400BadRequest);
-            }
         }
 
         #endregion INTERACTION METHODS

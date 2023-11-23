@@ -6,13 +6,15 @@ using ArduinoConnectWeb.Models.Exceptions;
 using ArduinoConnectWeb.Models.Users;
 using ArduinoConnectWeb.Models.Users.RequestModels;
 using ArduinoConnectWeb.Models.Users.ResponseModels;
+using ArduinoConnectWeb.Services.Auth;
+using ArduinoConnectWeb.Services.Base;
 using ArduinoConnectWeb.Utilities;
 using Newtonsoft.Json;
 using System;
 
 namespace ArduinoConnectWeb.Services.Users
 {
-    public class UsersService : IUsersService
+    public class UsersService : DataProcessor, IUsersService
     {
 
         //  VARIABLES
@@ -49,101 +51,77 @@ namespace ArduinoConnectWeb.Services.Users
         //  --------------------------------------------------------------------------------
         /// <summary> Create new user. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="requestUserCreateModel"> Request user create model. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> CreateUser(string? accessToken, CreateUserRequestModel requestUserCreateModel)
+        public async Task<BaseResponseModel<UserResponseModel>> CreateUserAsync(string? accessToken,
+            IAuthService authService, CreateUserRequestModel requestUserCreateModel)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
-                try
+                if (string.IsNullOrEmpty(accessToken))
+                    throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+
+                if (requestUserCreateModel == null)
+                    throw new ProcessingException("Invalid input data", StatusCodes.Status400BadRequest);
+
+                List<string> errorMessages = new();
+
+                if (string.IsNullOrWhiteSpace(requestUserCreateModel.UserName))
+                    errorMessages.Add($"Invalid {nameof(requestUserCreateModel.UserName)}");
+
+                if (string.IsNullOrEmpty(requestUserCreateModel.Password))
+                    errorMessages.Add($"Invalid {nameof(requestUserCreateModel.Password)}");
+
+                using (var passwordValidator = PasswordValidator.GetStrongConfiguration())
                 {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    if (requestUserCreateModel == null)
-                        throw new ProcessingException("Invalid input data", StatusCodes.Status400BadRequest);
-
-                    List<string> errorMessages = new();
-
-                    if (string.IsNullOrEmpty(requestUserCreateModel.UserName))
-                        errorMessages.Add($"Invalid {nameof(requestUserCreateModel.UserName)}");
-
-                    if (string.IsNullOrEmpty(requestUserCreateModel.Password))
-                        errorMessages.Add($"Invalid {nameof(requestUserCreateModel.Password)}");
-
-                    using (var passwordValidator = PasswordValidator.GetStrongConfiguration())
-                    {
-                        if (!passwordValidator.ValidatePassword(requestUserCreateModel.Password, out string? validationError))
-                            errorMessages.Add($"Invalid {nameof(requestUserCreateModel.Password)}. {validationError}");
-                    }
-
-                    if (requestUserCreateModel.Password != requestUserCreateModel.PasswordRepeat)
-                        errorMessages.Add($"{nameof(requestUserCreateModel.Password)} and {nameof(requestUserCreateModel.PasswordRepeat)} do not match");
-
-                    if (errorMessages.Any())
-                        throw new ProcessingException(string.Join("; ", errorMessages), StatusCodes.Status400BadRequest);
-
-                    if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserCreateModel.UserName?.ToLower()))
-                        throw new ProcessingException($"User named \"{requestUserCreateModel.UserName}\" already exists", StatusCodes.Status400BadRequest);
-
-                    var newUser = new UserDataModel(
-                        null,
-                        requestUserCreateModel.UserName,
-                        SecurityUtilities.ComputeSha256Hash(requestUserCreateModel.Password),
-                        requestUserCreateModel.PermissionLevel);
-
-                    _usersDataContext.AddUser(newUser);
-                    SaveDataContext();
-
-                    return new BaseResponseModel<UserResponseModel>(GetResponseUserModel(newUser));
+                    if (!passwordValidator.ValidatePassword(requestUserCreateModel.Password, out string? validationError))
+                        errorMessages.Add($"Invalid {nameof(requestUserCreateModel.Password)}. {validationError}");
                 }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<UserResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
 
-                    return new BaseResponseModel<UserResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                if (requestUserCreateModel.Password != requestUserCreateModel.PasswordRepeat)
+                    errorMessages.Add($"{nameof(requestUserCreateModel.Password)} and {nameof(requestUserCreateModel.PasswordRepeat)} do not match");
+
+                if (errorMessages.Any())
+                    throw new ProcessingException(string.Join("; ", errorMessages), StatusCodes.Status400BadRequest);
+
+                if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserCreateModel.UserName?.ToLower()))
+                    throw new ProcessingException($"User named \"{requestUserCreateModel.UserName}\" already exists", StatusCodes.Status400BadRequest);
+
+                var newUser = new UserDataModel(
+                    null,
+                    requestUserCreateModel.UserName,
+                    SecurityUtilities.ComputeSha256Hash(requestUserCreateModel.Password),
+                    requestUserCreateModel.PermissionLevel);
+
+                _usersDataContext.AddUser(newUser);
+
+                SaveDataContext();
+
+                return new BaseResponseModel<UserResponseModel>(new UserResponseModel(newUser));
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by identifier. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> GetUserById(string? accessToken, string? id)
+        public async Task<BaseResponseModel<UserResponseModel>> GetUserByIdAsync(string? accessToken,
+            IAuthService authService, string? id)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                if (string.IsNullOrEmpty(id))
+                    throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
 
-                    if (string.IsNullOrEmpty(id))
-                        throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
-                    var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
+                if (user is null)
+                    throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
 
-                    if (user is null)
-                        throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
-
-                    return new BaseResponseModel<UserResponseModel>(GetResponseUserModel(user));
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<UserResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<UserResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<UserResponseModel>(new UserResponseModel(user));
             });
         }
 
@@ -151,230 +129,163 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Get user by identifier. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> GetUserById(string? id)
+        public async Task<BaseResponseModel<UserDataModel>> GetUserByIdAsync(string? id)
         {
-            return await Task.Run(() =>
+            return await ProcessAsync(() =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(id))
-                        throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
+                if (string.IsNullOrEmpty(id))
+                    throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
 
-                    var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
-                    if (user is null)
-                        throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
+                if (user is null)
+                    throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
 
-                    return new BaseResponseModel<UserResponseModel>(GetResponseUserModel(user));
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<UserResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<UserResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<UserDataModel>(user);
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by user name. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="userName"> User name. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> GetUserByUserName(string? accessToken, string? userName)
+        public async Task<BaseResponseModel<UserResponseModel>> GetUserByUserNameAsync(string? accessToken,
+            IAuthService authService, string? userName)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                if (string.IsNullOrEmpty(userName))
+                    throw new ProcessingException("Invalid user name", StatusCodes.Status400BadRequest);
 
-                    if (string.IsNullOrEmpty(userName))
-                        throw new ProcessingException("Invalid user name", StatusCodes.Status400BadRequest);
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.UserName == userName);
 
-                    var user = _usersDataContext.Users.FirstOrDefault(u => u.UserName == userName);
+                if (user is null)
+                    throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
 
-                    if (user is null)
-                        throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
-
-                    return new BaseResponseModel<UserResponseModel>(GetResponseUserModel(user));
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<UserResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<UserResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<UserResponseModel>(new UserResponseModel(user));
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get users list. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserListResponseModel>> GetUsersList(string? accessToken)
+        public async Task<BaseResponseModel<UserListResponseModel>> GetUsersListAsync(string? accessToken,
+            IAuthService authService)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
-                try
+                var responseData = new UserListResponseModel()
                 {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
-                    var responseData = new UserListResponseModel()
+                    Users = _usersDataContext.Users.Select(u => new UserListItemResponseModel()
                     {
-                        Users = _usersDataContext.Users.Select(u => new UserListItemResponseModel()
-                        {
-                            Id = u.Id,
-                            UserName = u.UserName,
-                        }).ToList()
-                    };
+                        Id = u.Id,
+                        UserName = u.UserName,
+                    }).ToList()
+                };
 
-                    return new BaseResponseModel<UserListResponseModel>(responseData);
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<UserListResponseModel>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<UserListResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<UserListResponseModel>(responseData);
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Remove user by id. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> RemoveUser(string? accessToken, string? id)
+        public async Task<BaseResponseModel<string>> RemoveUserAsync(string? accessToken,
+            IAuthService authService, string? id)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
-                try
-                {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                if (string.IsNullOrEmpty(id))
+                    throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
 
-                    if (string.IsNullOrEmpty(id))
-                        throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
 
-                    var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper());
+                if (user is null)
+                    throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
 
-                    if (user is null)
-                        throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
+                _usersDataContext.RemoveUser(user);
 
-                    _usersDataContext.RemoveUser(user);
-                    SaveDataContext();
+                SaveDataContext();
 
-                    return new BaseResponseModel<string>(content: $"User removed");
-                }
-                catch (ProcessingException exc)
-                {
-                    return new BaseResponseModel<string>(exc.Message, exc.StatusCode);
-                }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
-
-                    return new BaseResponseModel<string>(errorMessage, StatusCodes.Status400BadRequest);
-                }
+                return new BaseResponseModel<string>(content: $"User removed");
             });
         }
 
         //  --------------------------------------------------------------------------------
         /// <summary> Update user. </summary>
         /// <param name="accessToken"> Access token. </param>
+        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
         /// <param name="requestUserUpdateModel"></param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> UpdateUser(string? accessToken, string? id, UpdateUserRequestModel requestUserUpdateModel)
+        public async Task<BaseResponseModel<UserResponseModel>> UpdateUserAsync(string? accessToken,
+            IAuthService authService, string? id, UpdateUserRequestModel requestUserUpdateModel)
         {
-            return await Task.Run(() =>
+            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
             {
                 var anyChange = false;
 
-                try
+                if (string.IsNullOrEmpty(id))
+                    throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
+
+                var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper())?.CloneWithType();
+
+                if (user is null)
+                    throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
+
+                if (!string.IsNullOrEmpty(requestUserUpdateModel.NewUserName))
                 {
-                    if (string.IsNullOrEmpty(accessToken))
-                        throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
+                    if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserUpdateModel.NewUserName.ToLower()))
+                        throw new ProcessingException($"User named \"{requestUserUpdateModel.NewUserName}\" already exists", StatusCodes.Status400BadRequest);
 
-                    if (string.IsNullOrEmpty(id))
-                        throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
+                    user.UserName = requestUserUpdateModel.NewUserName;
+                    anyChange = true;
+                }
 
-                    var user = _usersDataContext.Users.FirstOrDefault(u => u.Id == id.ToUpper())?.CloneWithType();
-
-                    if (user is null)
-                        throw new ProcessingException("User not found", StatusCodes.Status400BadRequest);
-
-                    if (!string.IsNullOrEmpty(requestUserUpdateModel.NewUserName))
+                if (!string.IsNullOrEmpty(requestUserUpdateModel.NewPassword))
+                {
+                    using (var passwordValidator = PasswordValidator.GetStrongConfiguration())
                     {
-                        if (_usersDataContext.Users.Any(u => u.UserName.ToLower() == requestUserUpdateModel.NewUserName.ToLower()))
-                            throw new ProcessingException($"User named \"{requestUserUpdateModel.NewUserName}\" already exists", StatusCodes.Status400BadRequest);
-
-                        user.UserName = requestUserUpdateModel.NewUserName;
-                        anyChange = true;
-                    }
-
-                    if (!string.IsNullOrEmpty(requestUserUpdateModel.NewPassword))
-                    {
-                        using (var passwordValidator = PasswordValidator.GetStrongConfiguration())
+                        if (!passwordValidator.ValidatePassword(requestUserUpdateModel.NewPassword, out string? validationError))
                         {
-                            if (!passwordValidator.ValidatePassword(requestUserUpdateModel.NewPassword, out string? validationError))
-                            {
-                                var errorMessage = $"Invalid {nameof(requestUserUpdateModel.NewPassword)}. {validationError}";
-                                throw new ProcessingException(errorMessage, StatusCodes.Status400BadRequest);
-                            }
-                        }
-
-                        if (requestUserUpdateModel.NewPassword != requestUserUpdateModel.NewPasswordRepeat)
-                        {
-                            var errorMessage = $"{nameof(requestUserUpdateModel.NewPassword)} and {nameof(requestUserUpdateModel.NewPasswordRepeat)} do not match";
+                            var errorMessage = $"Invalid {nameof(requestUserUpdateModel.NewPassword)}. {validationError}";
                             throw new ProcessingException(errorMessage, StatusCodes.Status400BadRequest);
                         }
-
-                        user.PasswordHash = SecurityUtilities.ComputeSha256Hash(requestUserUpdateModel.NewPassword);
-                        anyChange = true;
                     }
 
-                    if (requestUserUpdateModel.NewPermissionLevel.HasValue)
+                    if (requestUserUpdateModel.NewPassword != requestUserUpdateModel.NewPasswordRepeat)
                     {
-                        user.PermissionLevel = requestUserUpdateModel.NewPermissionLevel.Value;
-                        anyChange = true;
+                        var errorMessage = $"{nameof(requestUserUpdateModel.NewPassword)} and {nameof(requestUserUpdateModel.NewPasswordRepeat)} do not match";
+                        throw new ProcessingException(errorMessage, StatusCodes.Status400BadRequest);
                     }
 
-                    if (anyChange)
-                    {
-                        user.UpdateLastModifiedAt();
-
-                        _usersDataContext.UpdateUser(user);
-                        SaveDataContext();
-                    }
-
-                    return new BaseResponseModel<UserResponseModel>(GetResponseUserModel(user));
+                    user.PasswordHash = SecurityUtilities.ComputeSha256Hash(requestUserUpdateModel.NewPassword);
+                    anyChange = true;
                 }
-                catch (ProcessingException exc)
+
+                if (requestUserUpdateModel.NewPermissionLevel.HasValue)
                 {
-                    return new BaseResponseModel<UserResponseModel>(exc.Message, exc.StatusCode);
+                    user.PermissionLevel = requestUserUpdateModel.NewPermissionLevel.Value;
+                    anyChange = true;
                 }
-                catch (Exception exc)
-                {
-                    var errorMessage = $"An unknown error occurred while processing data: {exc.Message}";
 
-                    return new BaseResponseModel<UserResponseModel>(errorMessage, StatusCodes.Status400BadRequest);
+                if (anyChange)
+                {
+                    user.UpdateLastModifiedAt();
+
+                    _usersDataContext.UpdateUser(user);
+
+                    SaveDataContext();
                 }
+
+                return new BaseResponseModel<UserResponseModel>(new UserResponseModel(user));
             });
         }
 
@@ -383,9 +294,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="userName"> User name. </param>
         /// <param name="password"> Password. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserDataModel>> ValidateUser(string? userName, string? password)
+        public async Task<BaseResponseModel<UserDataModel>> ValidateUserAsync(string? userName, string? password)
         {
-            return await Task.Run(() =>
+            return await ProcessAsync(() =>
             {
                 if (string.IsNullOrEmpty(userName))
                     return new BaseResponseModel<UserDataModel>("User name can not be empty.");
@@ -406,24 +317,6 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         #endregion INTERACTION METHODS
-
-        #region RESPONSE CREATE METHODS
-
-        //  --------------------------------------------------------------------------------
-        /// <summary> Get response user model. </summary>
-        /// <param name="user"> User data model. </param>
-        /// <returns> Response user model. </returns>
-        private UserResponseModel GetResponseUserModel(UserDataModel user)
-        {
-            return new UserResponseModel(
-                user.Id,
-                user.UserName,
-                user.PermissionLevel,
-                user.CreatedAt,
-                user.LastModifiedAt);
-        }
-
-        #endregion RESPONSE CREATE METHODS
 
         #region SETUP METHODS
 

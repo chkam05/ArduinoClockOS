@@ -1,5 +1,6 @@
 ﻿using ArduinoConnectWeb.Models.Config;
 using ArduinoConnectWeb.Services.Auth;
+using ArduinoConnectWeb.Services.Base;
 using ArduinoConnectWeb.Services.Swagger;
 using ArduinoConnectWeb.Services.Users;
 using ArduinoConnectWeb.Utilities;

@@ -41,7 +41,7 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> GetCurrentSessions()
         {
             var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.GetSessions(authorizationHeader);
+            var response = await _authService.GetSessionsAsync(authorizationHeader);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -57,7 +57,7 @@ namespace ArduinoConnectWeb.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login([FromBody] LoginRequestModel requestLoginModel)
         {
-            var response = await _authService.Login(requestLoginModel);
+            var response = await _authService.LoginAsync(requestLoginModel);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -70,7 +70,7 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> Logout()
         {
             var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.Logout(authorizationHeader);
+            var response = await _authService.LogoutAsync(authorizationHeader);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -83,7 +83,7 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> LogoutAllSessions()
         {
             var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.LogoutAllSessions(authorizationHeader);
+            var response = await _authService.LogoutAllSessionsAsync(authorizationHeader);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -95,7 +95,7 @@ namespace ArduinoConnectWeb.Controllers
         [HttpPost("Refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshRequestModel refreshRequestModel)
         {
-            var response = await _authService.Refresh(refreshRequestModel);
+            var response = await _authService.RefreshAsync(refreshRequestModel);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }

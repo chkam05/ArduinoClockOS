@@ -17,6 +17,12 @@
         #region CLASS METHODS
 
         //  --------------------------------------------------------------------------------
+        /// <summary> UserResponseModel class constructor. </summary>
+        /// <param name="id"> User identifiers. </param>
+        /// <param name="userName"> User name. </param>
+        /// <param name="permissionLevel"> Persmission level. </param>
+        /// <param name="createdAt"> User creation date time. </param>
+        /// <param name="lastModifiedAt"> User modification date time. </param>
         public UserResponseModel(string id, string userName, UserPermissionLevel permissionLevel,
             DateTime createdAt, DateTime lastModifiedAt)
         {
@@ -25,6 +31,18 @@
             PermissionLevel = permissionLevel;
             CreatedAt = createdAt;
             LastModifiedAt = lastModifiedAt;
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> UserResponseModel class constructor. </summary>
+        /// <param name="user"> User data model. </param>
+        public UserResponseModel(UserDataModel user)
+        {
+            Id = user.Id;
+            UserName = user.UserName;
+            PermissionLevel = user.PermissionLevel;
+            CreatedAt = user.CreatedAt;
+            LastModifiedAt = user.LastModifiedAt;
         }
 
         #endregion CLASS METHODS
