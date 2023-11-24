@@ -1,5 +1,6 @@
 ﻿using ArduinoConnectWeb.Models.Base.ResponseModels;
 using ArduinoConnectWeb.Models.Users.RequestModels;
+using ArduinoConnectWeb.Models.Users.ResponseModels;
 using ArduinoConnectWeb.Services.Auth;
 using ArduinoConnectWeb.Services.Users;
 using ArduinoConnectWeb.Utilities;
@@ -46,7 +47,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> DeleteUser([FromQuery] string id)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.RemoveUserAsync(accessToken, _authService, id);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.RemoveUserAsync(id));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -64,7 +67,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> GetUserById([FromQuery] string id)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.GetUserByIdAsync(accessToken, _authService, id);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.GetUserByIdAsync(id));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -78,7 +83,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> GetUserByUserName([FromQuery] string userName)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.GetUserByUserNameAsync(accessToken, _authService, userName);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.GetUserByUserNameAsync(userName));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -91,7 +98,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> GetUsersList()
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.GetUsersListAsync(accessToken, _authService);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.GetUsersListAsync());
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -109,7 +118,9 @@ namespace ArduinoConnectWeb.Controllers
         public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestModel request)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.CreateUserAsync(accessToken, _authService, request);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.CreateUserAsync(request));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -130,7 +141,9 @@ namespace ArduinoConnectWeb.Controllers
             [FromBody] UpdateUserRequestModel request)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _usersService.UpdateUserAsync(accessToken, _authService, id, request);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _usersService.UpdateUserAsync(id, request));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }

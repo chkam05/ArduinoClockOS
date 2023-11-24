@@ -40,8 +40,8 @@ namespace ArduinoConnectWeb.Controllers
         [Authorize]
         public async Task<IActionResult> GetCurrentSessions()
         {
-            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.GetSessionsAsync(authorizationHeader);
+            var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.GetSessionsAsync);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -69,8 +69,8 @@ namespace ArduinoConnectWeb.Controllers
         [Authorize]
         public async Task<IActionResult> Logout()
         {
-            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.LogoutAsync(authorizationHeader);
+            var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.LogoutAsync);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -82,8 +82,8 @@ namespace ArduinoConnectWeb.Controllers
         [Authorize]
         public async Task<IActionResult> LogoutAllSessions()
         {
-            var authorizationHeader = ControllerUtilities.GetAuthorizationToken(HttpContext);
-            var response = await _authService.LogoutAllSessionsAsync(authorizationHeader);
+            var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.LogoutAllSessionsAsync);
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }

@@ -50,18 +50,12 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  --------------------------------------------------------------------------------
         /// <summary> Create new user. </summary>
-        /// <param name="accessToken"> Access token. </param>
-        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="requestUserCreateModel"> Request user create model. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> CreateUserAsync(string? accessToken,
-            IAuthService authService, CreateUserRequestModel requestUserCreateModel)
+        public async Task<BaseResponseModel<UserResponseModel>> CreateUserAsync(CreateUserRequestModel requestUserCreateModel)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
-                if (string.IsNullOrEmpty(accessToken))
-                    throw new ProcessingException("Invalid AccessToken", StatusCodes.Status401Unauthorized);
-
                 if (requestUserCreateModel == null)
                     throw new ProcessingException("Invalid input data", StatusCodes.Status400BadRequest);
 
@@ -104,14 +98,11 @@ namespace ArduinoConnectWeb.Services.Users
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by identifier. </summary>
-        /// <param name="accessToken"> Access token. </param>
-        /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> GetUserByIdAsync(string? accessToken,
-            IAuthService authService, string? id)
+        public async Task<BaseResponseModel<UserResponseModel>> GetUserByIdAsync(string? id)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
                 if (string.IsNullOrEmpty(id))
                     throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
@@ -129,7 +120,7 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Get user by identifier. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserDataModel>> GetUserByIdAsync(string? id)
+        public async Task<BaseResponseModel<UserDataModel>> GetFullUserByIdAsync(string? id)
         {
             return await ProcessAsync(() =>
             {
@@ -151,10 +142,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="authService"> Authentication service interface. </param>
         /// <param name="userName"> User name. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> GetUserByUserNameAsync(string? accessToken,
-            IAuthService authService, string? userName)
+        public async Task<BaseResponseModel<UserResponseModel>> GetUserByUserNameAsync(string? userName)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
                 if (string.IsNullOrEmpty(userName))
                     throw new ProcessingException("Invalid user name", StatusCodes.Status400BadRequest);
@@ -173,10 +163,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="accessToken"> Access token. </param>
         /// <param name="authService"> Authentication service interface. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserListResponseModel>> GetUsersListAsync(string? accessToken,
-            IAuthService authService)
+        public async Task<BaseResponseModel<UserListResponseModel>> GetUsersListAsync()
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
                 var responseData = new UserListResponseModel()
                 {
@@ -197,10 +186,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> RemoveUserAsync(string? accessToken,
-            IAuthService authService, string? id)
+        public async Task<BaseResponseModel<string>> RemoveUserAsync(string? id)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
                 if (string.IsNullOrEmpty(id))
                     throw new ProcessingException("Invalid user identifier", StatusCodes.Status400BadRequest);
@@ -225,10 +213,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <param name="id"> User identifier. </param>
         /// <param name="requestUserUpdateModel"></param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<UserResponseModel>> UpdateUserAsync(string? accessToken,
-            IAuthService authService, string? id, UpdateUserRequestModel requestUserUpdateModel)
+        public async Task<BaseResponseModel<UserResponseModel>> UpdateUserAsync(string? id, UpdateUserRequestModel requestUserUpdateModel)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, authService, (session) =>
+            return await ProcessAsync(() =>
             {
                 var anyChange = false;
 

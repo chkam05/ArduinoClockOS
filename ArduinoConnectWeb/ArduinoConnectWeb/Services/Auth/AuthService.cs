@@ -54,20 +54,37 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<SessionDataModel>> AuthorizeAsync(string? accessToken)
         {
-            return await ProcessAsync(() =>
+            return await Task.Run(() =>
             {
-                if (string.IsNullOrEmpty(accessToken))
-                    throw new UnauthorizedException("Invalid AccessToken");
+                try
+                {
+                    if (string.IsNullOrEmpty(accessToken))
+                        throw new UnauthorizedException("Invalid AccessToken");
 
-                var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
+                    var session = _authDataContext.Sessions.FirstOrDefault(s => s.AccessToken == accessToken);
 
-                if (session is null)
-                    throw new UnauthorizedException("Invalid AccessToken");
+                    if (session is null)
+                        throw new UnauthorizedException("Invalid AccessToken");
 
-                if (!session.IsAccessTokenValid())
-                    throw new UnauthorizedException("AccessToken expired");
+                    if (!session.IsAccessTokenValid())
+                        throw new UnauthorizedException("AccessToken expired");
 
-                return new BaseResponseModel<SessionDataModel>(session);
+                    return new BaseResponseModel<SessionDataModel>(session);
+                }
+                catch (UnauthorizedException exc)
+                {
+                    return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
+                }
+                catch (ProcessingException exc)
+                {
+                    return new BaseResponseModel<SessionDataModel>(exc.Message, exc.StatusCode);
+                }
+                catch (Exception exc)
+                {
+                    var errorMessage = $"{ERROR_MESSAGE}: {exc.Message}";
+
+                    return new BaseResponseModel<SessionDataModel>(errorMessage, StatusCodes.Status400BadRequest);
+                }
             });
         }
 
@@ -93,7 +110,7 @@ namespace ArduinoConnectWeb.Services.Auth
                     throw new UnauthorizedException("Session expired");
                 }
 
-                var userResponse = await _usersService.GetUserByIdAsync(session.UserId);
+                var userResponse = await _usersService.GetFullUserByIdAsync(session.UserId);
 
                 if (userResponse.IsSuccess && userResponse.Content is UserDataModel user)
                 {
@@ -125,9 +142,9 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Get current user sessions. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<SessionListResponseModel>> GetSessionsAsync(string? accessToken)
+        public async Task<BaseResponseModel<SessionListResponseModel>> GetSessionsAsync(SessionDataModel session)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
+            return await ProcessAsync(() =>
             {
                 var allUserSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId).ToList();
 
@@ -190,9 +207,9 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Logout. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> LogoutAsync(string? accessToken)
+        public async Task<BaseResponseModel<string>> LogoutAsync(SessionDataModel session)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
+            return await ProcessAsync(() =>
             {
                 _authDataContext.RemoveSession(session);
 
@@ -204,9 +221,9 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <summary> Logout from all sessions. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
-        public async Task<BaseResponseModel<string>> LogoutAllSessionsAsync(string? accessToken)
+        public async Task<BaseResponseModel<string>> LogoutAllSessionsAsync(SessionDataModel session)
         {
-            return await ProcessAsyncWithAuthorization(accessToken, this, (session) =>
+            return await ProcessAsync(() =>
             {
                 var allSessions = _authDataContext.Sessions.Where(s => s.UserId == session.UserId);
 
@@ -215,6 +232,91 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         #endregion INTERACTION METHODS
+
+        #region PROCESSING METHODS
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Process async with authorization. </summary>
+        /// <typeparam name="T"> Response data model. </typeparam>
+        /// <param name="accessToken"> Access token. </param>
+        /// <param name="func"> Task to process. </param>
+        /// <returns> Task with response view model. </returns>
+        public async Task<BaseResponseModel<T>> ProcessAsyncWithAuthorization<T>(string? accessToken,
+            Func<SessionDataModel, BaseResponseModel<T>> func) where T : class
+        {
+            var authorizationResponse = await AuthorizeAsync(accessToken);
+
+            if (authorizationResponse.IsSuccess && authorizationResponse.Content is SessionDataModel sessionDataModel)
+            {
+                return await Task.Run(() =>
+                {
+                    try
+                    {
+                        return func(sessionDataModel);
+                    }
+                    catch (UnauthorizedException uexc)
+                    {
+                        return new BaseResponseModel<T>(uexc.Message, uexc.StatusCode);
+                    }
+                    catch (ProcessingException pexc)
+                    {
+                        return new BaseResponseModel<T>(pexc.Message, pexc.StatusCode);
+                    }
+                    catch (Exception exc)
+                    {
+                        var errorMessage = $"{ERROR_MESSAGE}: {exc.Message}";
+                        return new BaseResponseModel<T>(errorMessage, StatusCodes.Status400BadRequest);
+                    }
+                });
+            }
+            else
+            {
+                var errorMessages = authorizationResponse.ErrorMessages ?? new List<string> { ERROR_MESSAGE };
+                var statusCode = authorizationResponse.StatusCode;
+                return new BaseResponseModel<T>(errorMessages, statusCode);
+            }
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Process task async with authorization. </summary>
+        /// <typeparam name="T"> Response data model. </typeparam>
+        /// <param name="accessToken"> Access token. </param>
+        /// <param name="func"> Task to process. </param>
+        /// <returns> Task with response view model. </returns>
+        public async Task<BaseResponseModel<T>> ProcessTaskAsyncWithAuthorization<T>(string? accessToken,
+            Func<SessionDataModel, Task<BaseResponseModel<T>>> func) where T : class
+        {
+            var authorizationResponse = await AuthorizeAsync(accessToken);
+
+            if (authorizationResponse.IsSuccess && authorizationResponse.Content is SessionDataModel sessionDataModel)
+            {
+                try
+                {
+                    return await func(sessionDataModel);
+                }
+                catch (UnauthorizedException uexc)
+                {
+                    return new BaseResponseModel<T>(uexc.Message, uexc.StatusCode);
+                }
+                catch (ProcessingException pexc)
+                {
+                    return new BaseResponseModel<T>(pexc.Message, pexc.StatusCode);
+                }
+                catch (Exception exc)
+                {
+                    var errorMessage = $"{ERROR_MESSAGE}: {exc.Message}";
+                    return new BaseResponseModel<T>(errorMessage, StatusCodes.Status400BadRequest);
+                }
+            }
+            else
+            {
+                var errorMessages = authorizationResponse.ErrorMessages ?? new List<string> { ERROR_MESSAGE };
+                var statusCode = authorizationResponse.StatusCode;
+                return new BaseResponseModel<T>(errorMessages, statusCode);
+            }
+        }
+
+        #endregion PROCESSING METHODS
 
         #region TOKEN MANAGEMENT METHODS
 
