@@ -20,7 +20,6 @@ namespace ArduinoConnectWeb.Services.Users
         //  VARIABLES
 
         private readonly UsersServiceConfig _config;
-        private readonly ILogger<UsersService> _logger;
         private readonly UsersDataContext _usersDataContext;
 
 
@@ -32,10 +31,9 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> UsersService class constructor. </summary>
         /// <param name="config"> Users service config. </param>
         /// <param name="logger"> Application logger. </param>
-        public UsersService(UsersServiceConfig config, ILogger<UsersService> logger)
+        public UsersService(UsersServiceConfig config, ILogger<UsersService> logger) : base(logger)
         {
             _config = config;
-            _logger = logger;
 
             _usersDataContext = new UsersDataContext(_config.UsersStorageFile);
             _usersDataContext.LoadData();
@@ -49,7 +47,7 @@ namespace ArduinoConnectWeb.Services.Users
         #region INTERACTION METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Create new user. </summary>
+        /// <summary> Create new user async. </summary>
         /// <param name="requestUserCreateModel"> Request user create model. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<UserResponseModel>> CreateUserAsync(CreateUserRequestModel requestUserCreateModel)
@@ -97,7 +95,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get user by identifier. </summary>
+        /// <summary> Get user by identifier async. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<UserResponseModel>> GetUserByIdAsync(string? id)
@@ -117,7 +115,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get user by identifier. </summary>
+        /// <summary> Get user by identifier async. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<UserDataModel>> GetFullUserByIdAsync(string? id)
@@ -137,7 +135,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get user by user name. </summary>
+        /// <summary> Get user by user name async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <param name="authService"> Authentication service interface. </param>
         /// <param name="userName"> User name. </param>
@@ -159,7 +157,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get users list. </summary>
+        /// <summary> Get users list async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <param name="authService"> Authentication service interface. </param>
         /// <returns> Response view model. </returns>
@@ -181,7 +179,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Remove user by id. </summary>
+        /// <summary> Remove user by id async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
@@ -207,7 +205,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Update user. </summary>
+        /// <summary> Update user async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <param name="authService"> Authentication service interface. </param>
         /// <param name="id"> User identifier. </param>
@@ -277,7 +275,7 @@ namespace ArduinoConnectWeb.Services.Users
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Validate user. </summary>
+        /// <summary> Validate user async. </summary>
         /// <param name="userName"> User name. </param>
         /// <param name="password"> Password. </param>
         /// <returns> Response view model. </returns>
@@ -311,7 +309,7 @@ namespace ArduinoConnectWeb.Services.Users
         /// <summary> Initialize default users. </summary>
         private void InitializeDefaultUsers()
         {
-            _logger.LogInformation($"{nameof(UsersService)}: Initializing default users.");
+            Logger.LogInformation($"{nameof(UsersService)}: Initializing default users.");
 
             //  Log initialization errors.
 
@@ -319,7 +317,7 @@ namespace ArduinoConnectWeb.Services.Users
             {
                 foreach (var errorMessage in _config.InitErrorMessages)
                 {
-                    _logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding user ({errorMessage}).");
+                    Logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding default user ({errorMessage}).");
                 }
 
                 _config.InitErrorMessages = null;
@@ -337,7 +335,7 @@ namespace ArduinoConnectWeb.Services.Users
                     }
                     catch (Exception exc)
                     {
-                        _logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding user ({exc.Message}).");
+                        Logger.LogWarning($"{nameof(UsersService)}: An error occurred while adding default user ({exc.Message}).");
                     }
                 }
 
@@ -363,7 +361,7 @@ namespace ArduinoConnectWeb.Services.Users
             var saved = _usersDataContext.SaveData();
 
             if (saved)
-                _logger.LogInformation($"{nameof(UsersService)}: Users configuration updated.");
+                Logger.LogInformation($"{nameof(UsersService)}: Users configuration updated.");
         }
 
         #endregion UTILITY METHODS

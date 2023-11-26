@@ -23,7 +23,6 @@ namespace ArduinoConnectWeb.Services.Auth
 
         private readonly AuthDataContext _authDataContext;
         private readonly AuthServiceConfig _config;
-        private readonly ILogger<AuthService> _logger;
         private readonly IUsersService _usersService;
 
 
@@ -36,9 +35,9 @@ namespace ArduinoConnectWeb.Services.Auth
         /// <param name="config"> Users service config. </param>
         /// <param name="logger"> Application logger. </param>
         public AuthService(AuthServiceConfig config, ILogger<AuthService> logger, IUsersService usersService)
+            : base(logger)
         {
             _config = config;
-            _logger = logger;
             _usersService = usersService;
 
             _authDataContext = new AuthDataContext();
@@ -49,7 +48,7 @@ namespace ArduinoConnectWeb.Services.Auth
         #region INTERACTION METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Authorize. </summary>
+        /// <summary> Authorize async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<SessionDataModel>> AuthorizeAsync(string? accessToken)
@@ -89,7 +88,7 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Refresh tokens. </summary>
+        /// <summary> Refresh tokens async. </summary>
         /// <param name="refreshRequestModel"> Refresh request model. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<SessionDataModel>> RefreshAsync(RefreshRequestModel refreshRequestModel)
@@ -139,7 +138,7 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get current user sessions. </summary>
+        /// <summary> Get current user sessions async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<SessionListResponseModel>> GetSessionsAsync(SessionDataModel session)
@@ -164,7 +163,7 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Login. </summary>
+        /// <summary> Login async. </summary>
         /// <param name="loginRequestModel"> Login request model. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<SessionDataModel>> LoginAsync(LoginRequestModel loginRequestModel)
@@ -204,7 +203,7 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Logout. </summary>
+        /// <summary> Logout async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<string>> LogoutAsync(SessionDataModel session)
@@ -218,7 +217,7 @@ namespace ArduinoConnectWeb.Services.Auth
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Logout from all sessions. </summary>
+        /// <summary> Logout from all sessions async. </summary>
         /// <param name="accessToken"> Access token. </param>
         /// <returns> Response view model. </returns>
         public async Task<BaseResponseModel<string>> LogoutAllSessionsAsync(SessionDataModel session)

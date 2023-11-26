@@ -13,15 +13,21 @@ namespace ArduinoConnectWeb.Services.Base
         public const string ERROR_MESSAGE = "An unknown error occurred while processing data";
 
 
+        //  VARIABLES
+
+        protected readonly ILogger Logger;
+
+
         //  METHODS
 
         #region CLASS METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> DataProcessor class constructor. </summary>
-        public DataProcessor()
+        /// <param name="logger"> Application logger. </param>
+        public DataProcessor(ILogger logger)
         {
-            //
+            Logger = logger;
         }
 
         #endregion CLASS METHODS
@@ -43,15 +49,18 @@ namespace ArduinoConnectWeb.Services.Base
                 }
                 catch (UnauthorizedException uexc)
                 {
+                    Logger.LogWarning($"{nameof(UnauthorizedException)}: {uexc.Message}");
                     return new BaseResponseModel<T>(uexc.Message, uexc.StatusCode);
                 }
                 catch (ProcessingException pexc)
                 {
+                    Logger.LogWarning($"{nameof(ProcessingException)}: {pexc.Message}");
                     return new BaseResponseModel<T>(pexc.Message, pexc.StatusCode);
                 }
                 catch (Exception exc)
                 {
                     var errorMessage = $"{ERROR_MESSAGE}: {exc.Message}";
+                    Logger.LogWarning($"{typeof(Exception).Name}: {errorMessage}");
                     return new BaseResponseModel<T>(errorMessage, StatusCodes.Status400BadRequest);
                 }
             });
@@ -70,15 +79,18 @@ namespace ArduinoConnectWeb.Services.Base
             }
             catch (UnauthorizedException uexc)
             {
+                Logger.LogWarning($"{nameof(UnauthorizedException)}: {uexc.Message}");
                 return new BaseResponseModel<T>(uexc.Message, uexc.StatusCode);
             }
             catch (ProcessingException pexc)
             {
+                Logger.LogWarning($"{nameof(ProcessingException)}: {pexc.Message}");
                 return new BaseResponseModel<T>(pexc.Message, pexc.StatusCode);
             }
             catch (Exception exc)
             {
                 var errorMessage = $"{ERROR_MESSAGE}: {exc.Message}";
+                Logger.LogWarning($"{typeof(Exception).Name}: {errorMessage}");
                 return new BaseResponseModel<T>(errorMessage, StatusCodes.Status400BadRequest);
             }
         }

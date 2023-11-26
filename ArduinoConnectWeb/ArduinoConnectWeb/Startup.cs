@@ -1,6 +1,7 @@
 ﻿using ArduinoConnectWeb.Models.Config;
 using ArduinoConnectWeb.Services.Auth;
 using ArduinoConnectWeb.Services.Base;
+using ArduinoConnectWeb.Services.Serial;
 using ArduinoConnectWeb.Services.Swagger;
 using ArduinoConnectWeb.Services.Users;
 using ArduinoConnectWeb.Utilities;
@@ -91,6 +92,7 @@ namespace ArduinoConnectWeb
 
             services.RegisterUsersService(Configuration);
             services.RegisterAuthService(Configuration);
+            services.RegisterSerialPortService(Configuration);
 
             services.AddControllersWithViews();
             services.RegisterSwaggerService(Configuration);

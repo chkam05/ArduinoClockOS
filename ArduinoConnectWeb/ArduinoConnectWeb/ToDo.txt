@@ -1,12 +1,2 @@
-﻿[1]. BaseProcessor
-
- - async with Task
- - async without Task
-
- - async with Task and authorization
- - async without Task and authorization
-
- - UnauthorizedException
-
-[2]. Poprawka dla endpointów wymagających autoryzacji: AccessToken.
-[3]. Dodanie endpointu GetMyProfile [AccessToken].
+﻿[1] Tools for getting ip addresses
+[2] ArduinoConnect: commands

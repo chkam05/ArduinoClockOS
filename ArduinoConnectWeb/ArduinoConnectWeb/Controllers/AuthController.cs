@@ -34,11 +34,11 @@ namespace ArduinoConnectWeb.Controllers
         #region GET AUTH CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get current user sessions. </summary>
+        /// <summary> Get current user sessions async. </summary>
         /// <returns> Sessions list or BadRequestObjectResult. </returns>
         [HttpGet("GetCurrentSessions")]
         [Authorize]
-        public async Task<IActionResult> GetCurrentSessions()
+        public async Task<IActionResult> GetCurrentSessionsAsync()
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.GetSessionsAsync);
@@ -51,11 +51,11 @@ namespace ArduinoConnectWeb.Controllers
         #region POST AUTH CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Login. </summary>
+        /// <summary> Login async. </summary>
         /// <param name="requestLoginModel"> Request login model. </param>
         /// <returns> Session data or BadRequestObjectResult. </returns>
         [HttpPost("Login")]
-        public async Task<IActionResult> Login([FromBody] LoginRequestModel requestLoginModel)
+        public async Task<IActionResult> LoginAsync([FromBody] LoginRequestModel requestLoginModel)
         {
             var response = await _authService.LoginAsync(requestLoginModel);
 
@@ -63,11 +63,11 @@ namespace ArduinoConnectWeb.Controllers
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Logout. </summary>
+        /// <summary> Logout async. </summary>
         /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpPost("Logout")]
         [Authorize]
-        public async Task<IActionResult> Logout()
+        public async Task<IActionResult> LogoutAsync()
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.LogoutAsync);
@@ -76,11 +76,11 @@ namespace ArduinoConnectWeb.Controllers
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Logout. </summary>
+        /// <summary> Logout from all sessions async. </summary>
         /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpPost("LogoutAllSessions")]
         [Authorize]
-        public async Task<IActionResult> LogoutAllSessions()
+        public async Task<IActionResult> LogoutAllSessionsAsync()
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken, _authService.LogoutAllSessionsAsync);
@@ -89,11 +89,11 @@ namespace ArduinoConnectWeb.Controllers
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Refresh tokens. </summary>
+        /// <summary> Refresh tokens async. </summary>
         /// <param name="refreshRequestModel"> Refresh request model. </param>
         /// <returns> Session data or BadRequestObjectResult. </returns>
         [HttpPost("Refresh")]
-        public async Task<IActionResult> Refresh([FromBody] RefreshRequestModel refreshRequestModel)
+        public async Task<IActionResult> RefreshAsync([FromBody] RefreshRequestModel refreshRequestModel)
         {
             var response = await _authService.RefreshAsync(refreshRequestModel);
 

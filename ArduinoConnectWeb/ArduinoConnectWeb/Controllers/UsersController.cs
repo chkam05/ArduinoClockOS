@@ -39,12 +39,12 @@ namespace ArduinoConnectWeb.Controllers
         #region DELETE USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Remove user by id. </summary>
+        /// <summary> Remove user by id async. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> Success message or BadRequestObjectResult. </returns>
         [HttpDelete("DeleteUser")]
         [Authorize]
-        public async Task<IActionResult> DeleteUser([FromQuery] string id)
+        public async Task<IActionResult> DeleteUserAsync([FromQuery] string id)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
@@ -59,12 +59,12 @@ namespace ArduinoConnectWeb.Controllers
         #region GET USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get user by identifier. </summary>
+        /// <summary> Get user by identifier async. </summary>
         /// <param name="id"> User identifier. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserById")]
         [Authorize]
-        public async Task<IActionResult> GetUserById([FromQuery] string id)
+        public async Task<IActionResult> GetUserByIdAsync([FromQuery] string id)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
@@ -75,12 +75,12 @@ namespace ArduinoConnectWeb.Controllers
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get user by user name. </summary>
+        /// <summary> Get user by user name async. </summary>
         /// <param name="userName"> User name. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpGet("GetUserByUserName")]
         [Authorize]
-        public async Task<IActionResult> GetUserByUserName([FromQuery] string userName)
+        public async Task<IActionResult> GetUserByUserNameAsync([FromQuery] string userName)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
@@ -91,11 +91,11 @@ namespace ArduinoConnectWeb.Controllers
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get users list. </summary>
+        /// <summary> Get users list async. </summary>
         /// <returns> Users list or BadRequestObjectResult. </returns>
         [HttpGet("GetUsersList")]
         [Authorize]
-        public async Task<IActionResult> GetUsersList()
+        public async Task<IActionResult> GetUsersListAsync()
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
@@ -110,17 +110,17 @@ namespace ArduinoConnectWeb.Controllers
         #region POST USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Create new user. </summary>
-        /// <param name="request"> Request user create model. </param>
+        /// <summary> Create new user async. </summary>
+        /// <param name="requestModel"> Request user create model. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPost("CreateUser")]
         [Authorize]
-        public async Task<IActionResult> CreateUser([FromBody] CreateUserRequestModel request)
+        public async Task<IActionResult> CreateUserAsync([FromBody] CreateUserRequestModel requestModel)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
-                session => _usersService.CreateUserAsync(request));
+                session => _usersService.CreateUserAsync(requestModel));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
@@ -130,20 +130,20 @@ namespace ArduinoConnectWeb.Controllers
         #region UPDATE USER CONTROLLER METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Update user. </summary>
+        /// <summary> Update user async. </summary>
         /// <param name="id"> User identifier. </param>
-        /// <param name="request"> Request user update model. </param>
+        /// <param name="requestModel"> Request user update model. </param>
         /// <returns> User data or BadRequestObjectResult. </returns>
         [HttpPatch("UpdateUser")]
         [Authorize]
-        public async Task<IActionResult> UpdateUser(
+        public async Task<IActionResult> UpdateUserAsync(
             [FromQuery] string id,
-            [FromBody] UpdateUserRequestModel request)
+            [FromBody] UpdateUserRequestModel requestModel)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
-                session => _usersService.UpdateUserAsync(id, request));
+                session => _usersService.UpdateUserAsync(id, requestModel));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
