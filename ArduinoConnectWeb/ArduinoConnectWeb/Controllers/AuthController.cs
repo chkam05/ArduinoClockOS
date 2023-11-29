@@ -31,7 +31,7 @@ namespace ArduinoConnectWeb.Controllers
 
         #endregion CLASS METHODS
 
-        #region GET AUTH CONTROLLER METHODS
+        #region GET METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get current user sessions async. </summary>
@@ -46,9 +46,9 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion GET AUTH CONTROLLER METHODS
+        #endregion GET METHODS
 
-        #region POST AUTH CONTROLLER METHODS
+        #region POST METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Login async. </summary>
@@ -100,7 +100,7 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion POST AUTH CONTROLLER METHODS
+        #endregion POST METHODS
 
         #region UTILITY METHODS
 

@@ -22,7 +22,7 @@ namespace ArduinoConnectWeb.Controllers
 
         #endregion CLASS METHODS
 
-        #region CONTROLLER GET METHODS
+        #region GET METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Generate image from string. </summary>
@@ -67,7 +67,7 @@ namespace ArduinoConnectWeb.Controllers
             return new BadRequestResult();
         }
 
-        #endregion CONTROLLER GET METHODS
+        #endregion GET METHODS
 
     }
 }

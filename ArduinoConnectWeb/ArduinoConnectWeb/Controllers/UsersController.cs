@@ -36,7 +36,7 @@ namespace ArduinoConnectWeb.Controllers
 
         #endregion CLASS METHODS
 
-        #region DELETE USER CONTROLLER METHODS
+        #region DELETE METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Remove user by id async. </summary>
@@ -54,9 +54,9 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion DELETE USER CONTROLLER METHODS
+        #endregion DELETE METHODS
 
-        #region GET USER CONTROLLER METHODS
+        #region GET METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get user by identifier async. </summary>
@@ -105,9 +105,9 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion GET USER CONTROLLER METHODS
+        #endregion GET METHODS
 
-        #region POST USER CONTROLLER METHODS
+        #region POST METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Create new user async. </summary>
@@ -125,9 +125,9 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion POST USER CONTROLLER METHODS
+        #endregion POST METHODS
 
-        #region UPDATE USER CONTROLLER METHODS
+        #region UPDATE METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Update user async. </summary>
@@ -148,7 +148,7 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion UPDATE USER CONTROLLER METHODS
+        #endregion UPDATE METHODS
 
         #region UTILITY METHODS
 

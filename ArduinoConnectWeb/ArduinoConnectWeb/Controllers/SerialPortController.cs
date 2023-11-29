@@ -34,7 +34,7 @@ namespace ArduinoConnectWeb.Controllers
 
         #endregion CLASS METHODS
 
-        #region GET SERIAL PORT CONTROLLER METHODS
+        #region GET METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Get all ports async. </summary>
@@ -140,9 +140,9 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion GET SERIAL PORT CONTROLLER METHODS
+        #endregion GET METHODS
 
-        #region POST SERIAL PORT CONTROLLER METHODS
+        #region POST METHODS
 
         //  --------------------------------------------------------------------------------
         /// <summary> Connect async. </summary>
@@ -214,7 +214,7 @@ namespace ArduinoConnectWeb.Controllers
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }
 
-        #endregion POST SERIAL PORT CONTROLLER METHODS
+        #endregion POST METHODS
 
     }
 }
