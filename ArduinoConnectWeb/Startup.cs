@@ -1,10 +1,11 @@
 ﻿using ArduinoConnectWeb.Models.Config;
 using ArduinoConnectWeb.Services.Auth;
 using ArduinoConnectWeb.Services.Base;
-using ArduinoConnectWeb.Services.NetworkService;
+using ArduinoConnectWeb.Services.Network;
 using ArduinoConnectWeb.Services.Serial;
 using ArduinoConnectWeb.Services.Swagger;
 using ArduinoConnectWeb.Services.Users;
+using ArduinoConnectWeb.Services.Weather;
 using ArduinoConnectWeb.Utilities;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -95,6 +96,7 @@ namespace ArduinoConnectWeb
             services.RegisterAuthService(Configuration);
             services.RegisterNetworkService(Configuration);
             services.RegisterSerialPortService(Configuration);
+            services.RegisterWeatherSerivce(Configuration);
 
             services.AddControllersWithViews();
             services.RegisterSwaggerService(Configuration);

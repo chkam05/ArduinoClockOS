@@ -1,6 +1,6 @@
-﻿namespace ArduinoConnectWeb.Services.NetworkService
+namespace ArduinoConnectWeb.Services.Weather
 {
-    public static class NetworkServiceExtension
+    public static class WeatherServiceExtension
     {
 
         //  METHODS
@@ -8,35 +8,35 @@
         #region REGISTRATION METHODS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Register and configure network service.  </summary>
+        /// <summary> Register and configure Weather service.  </summary>
         /// <param name="services"> ServiceCollection interface that contains collection of services available in application. </param>
         /// <param name="configuration"> Application configuration. </param>
         /// <returns> ServiceCollection interface that contains collection of services available in application. </param>
-        public static IServiceCollection RegisterNetworkService(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection RegisterWeatherSerivce(this IServiceCollection services, IConfiguration configuration)
         {
-            //  Register users service configuration.
+            //  Register Weather service configuration.
             services.RegisterConfiguration(configuration);
 
-            //  Register users service.
-            services.AddTransient<INetworkService, NetworkService>();
+            //  Register Weather service.
+            services.AddTransient<IWeatherService, WeatherService>();
 
             return services;
         }
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Register network service configuration. </summary>
+        /// <summary> Register Weather service configuration. </summary>
         /// <param name="services"> ServiceCollection interface that contains collection of services available in application. </param>
         /// <param name="configuration"> Application configuration. </param>
         /// <returns> ServiceCollection interface that contains collection of services available in application. </param>
         private static IServiceCollection RegisterConfiguration(this IServiceCollection services, IConfiguration configuration)
         {
             //  Initialize configuration.
-            var config = new NetworkServiceConfig()
+            var config = new WeatherServiceConfig()
             {
-                //
+                TimeOut = configuration.GetValue<TimeSpan>("WeatherServiceConfig:Timeout")
             };
 
-            //  Register network service configuration.
+            //  Register Weather service configuration.
             services.AddSingleton(config);
 
             return services;

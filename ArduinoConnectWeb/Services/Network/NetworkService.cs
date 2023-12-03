@@ -5,7 +5,7 @@ using ArduinoConnectWeb.Models.Network.ResponseModels;
 using ArduinoConnectWeb.Services.Base;
 using System.Net;
 
-namespace ArduinoConnectWeb.Services.NetworkService
+namespace ArduinoConnectWeb.Services.Network
 {
     public class NetworkService : DataProcessor, INetworkService
     {

@@ -2,7 +2,7 @@
 using ArduinoConnectWeb.Models.Base.ResponseModels;
 using ArduinoConnectWeb.Models.Network.ResponseModels;
 
-namespace ArduinoConnectWeb.Services.NetworkService
+namespace ArduinoConnectWeb.Services.Network
 {
     public interface INetworkService
     {

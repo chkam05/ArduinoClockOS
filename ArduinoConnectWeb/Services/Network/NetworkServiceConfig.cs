@@ -1,4 +1,4 @@
-﻿namespace ArduinoConnectWeb.Services.NetworkService
+﻿namespace ArduinoConnectWeb.Services.Network
 {
     public class NetworkServiceConfig
     {

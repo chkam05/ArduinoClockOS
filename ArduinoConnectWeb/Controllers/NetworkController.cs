@@ -1,5 +1,5 @@
 ﻿using ArduinoConnectWeb.Services.Auth;
-using ArduinoConnectWeb.Services.NetworkService;
+using ArduinoConnectWeb.Services.Network;
 using ArduinoConnectWeb.Utilities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
