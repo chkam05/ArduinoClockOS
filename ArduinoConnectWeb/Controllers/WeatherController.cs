@@ -36,17 +36,33 @@ namespace ArduinoConnectWeb.Controllers
         #region GET METHDOS
 
         //  --------------------------------------------------------------------------------
-        /// <summary> Get weather by city async. </summary>
+        /// <summary> Get raw weather async. </summary>
         /// <param name="cityName"> City name. </param>
-        /// <returns> User data or BadRequestObjectResult. </returns>
-        [HttpGet("GetWeatherByCity")]
+        /// <returns> Weather data or BadRequestObjectResult. </returns>
+        [HttpGet("GetWeather")]
         [Authorize]
-        public async Task<IActionResult> GetWeatherByCityAsync([FromQuery] string cityName)
+        public async Task<IActionResult> GetWeatherAsync([FromQuery] string cityName)
         {
             var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
 
             var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
-                session => _weatherService.GetWeatherByCityAsync(session, cityName));
+                session => _weatherService.GetWeatherAsync(session, cityName));
+
+            return ControllerUtilities.CreateHttpObjectResponse(response);
+        }
+
+        //  --------------------------------------------------------------------------------
+        /// <summary> Get raw weather async. </summary>
+        /// <param name="cityName"> City name. </param>
+        /// <returns> Weather raw data or BadRequestObjectResult. </returns>
+        [HttpGet("GetWeatherRaw")]
+        [Authorize]
+        public async Task<IActionResult> GetWeatherRawAsync([FromQuery] string cityName)
+        {
+            var accessToken = ControllerUtilities.GetAuthorizationToken(HttpContext);
+
+            var response = await _authService.ProcessTaskAsyncWithAuthorization(accessToken,
+                session => _weatherService.GetWeatherRawAsync(session, cityName));
 
             return ControllerUtilities.CreateHttpObjectResponse(response);
         }

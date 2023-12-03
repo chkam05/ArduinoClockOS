@@ -31,6 +31,27 @@ namespace ArduinoConnectWeb.Models.Weather
         [JsonProperty("hourly")]
         public List<WeatherHourly>? Hourly { get; set; }
 
+        [JsonProperty("maxtempC")]
+        public string? MaxTempC { get; set; }
+
+        [JsonProperty("maxtempF")]
+        public string? MaxTempF { get; set; }
+
+        [JsonProperty("mintempC")]
+        public string? MinTempC { get; set; }
+
+        [JsonProperty("mintempF")]
+        public string? MinTempF { get; set; }
+
+        [JsonProperty("sunHour")]
+        public string? SunHour { get; set; }
+
+        [JsonProperty("totalSnow_cm")]
+        public string? TotalSnowCm { get; set; }
+
+        [JsonProperty("uvIndex")]
+        public string? UvIndex { get; set; }
+
 
         //  METHODS
 

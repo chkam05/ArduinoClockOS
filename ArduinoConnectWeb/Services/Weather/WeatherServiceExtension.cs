@@ -33,7 +33,7 @@ namespace ArduinoConnectWeb.Services.Weather
             //  Initialize configuration.
             var config = new WeatherServiceConfig()
             {
-                TimeOut = configuration.GetValue<TimeSpan>("WeatherServiceConfig:Timeout")
+                TimeOut = configuration.GetValue<TimeSpan?>("WeatherServiceConfig:Timeout") ?? TimeSpan.FromMicroseconds(5000),
             };
 
             //  Register Weather service configuration.
