@@ -20,8 +20,9 @@
 #define MENU_EXIT                 0
 
 #define LEVEL_MENU                100
-#define LEVEL_MENU_ITEMS          2
+#define LEVEL_MENU_ITEMS          3
 #define MENU_ITEM_SETTINGS        101
+#define MENU_ITEM_LEDS            102
 #define MENU_ITEM_EXIT            100
 
 #define LEVEL_SETTINGS            200
@@ -85,6 +86,11 @@ void MenuController::DisplayMenu(bool clear = false)
             case MENU_ITEM_SETTINGS:
                 _ds->DrawSprite(SPRITE_SETTINGS, 0, 1);
                 _ds->PrintText(0, _text_offset, "Settings");
+                break;
+            
+            case MENU_ITEM_LEDS:
+                _ds->DrawSprite(SPRITE_LEDS, 0, 0);
+                _ds->PrintText(0, _text_offset, "Leds");
                 break;
             
             case MENU_ITEM_EXIT:
@@ -163,9 +169,13 @@ int MenuController::NavigateForward()
             this->DisplayMenu();
             return MENU_ITEM_SETTINGS;
         
+        case MENU_ITEM_LEDS:
+            this->DisplayMenu(true);
+            return this->menu_selection;
+        
         case MENU_ITEM_EXIT:
             this->DisplayMenu(true);
-            return MENU_EXIT;
+            return this->menu_selection;
         
         case SETTINGS_ITEM_TIME:
         case SETTINGS_ITEM_DATE:

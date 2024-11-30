@@ -42,7 +42,7 @@
 #define DISPLAY_TEMPERATURE_IN_STATE    1
 #define DISPLAY_TEMPERATURE_OUT_STATE   2
 
-#define GLOBAL_STATES                   8
+#define GLOBAL_STATES                   9
 #define GLOBAL_STATE_NORMAL             0
 #define GLOBAL_STATE_MENU               1
 #define GLOBAL_STATE_SETTER             2
@@ -51,6 +51,7 @@
 #define GLOBAL_STATE_SONG_PLAY          5
 #define GLOBAL_STATE_VPLAYER            6
 #define GLOBAL_STATE_SERVICE_LOCK       7
+#define GLOBAL_STATE_LEDS               8
 
 const String CONFIG_FILE_NAME = "conf.ini";
 

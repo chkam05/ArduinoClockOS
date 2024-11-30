@@ -54,13 +54,17 @@
 class LedController
 {
     private:
-        IRController  * ir_controller;
-        bool onOffState = false;
+        IRController * ir_controller;
+
+        String  color_name;
+        bool    on_off_state  = false;
+        bool    has_changed   = true;
 
         bool ParseColorHue(String command, int &value);
+        void SendIRCommand(uint32_t data);
 
     public:
-        LedController(IRController * ir_controller);
+        LedController(IRController * ir_controller, String color_name = "White");
 
         int   ProcessCommand(String command);
         int   On();
@@ -76,6 +80,10 @@ class LedController
         int   Smooth();
         int   Brighter();
         int   Darker();
+
+        String  GetName();
+        void    SetName(String color_name);
+        bool    HasChanged();
 };
 
 
@@ -96,15 +104,23 @@ bool LedController::ParseColorHue(String command, int &value)
     return false;
 }
 
+//  ----------------------------------------------------------------------------
+void LedController::SendIRCommand(uint32_t data)
+{
+    this->ir_controller->Send(data);
+    this->has_changed = true;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 //  *** PUBLIC METHOD BODIES ***
 ////////////////////////////////////////////////////////////////////////////////
 
 //  Konstruktor klasy modulu kontrolera tasm led.
-LedController::LedController(IRController * ir_controller)
+LedController::LedController(IRController * ir_controller, String color_name = "White")
 {
     this->ir_controller = ir_controller;
+    this->color_name = color_name;
 }
 
 //  ----------------------------------------------------------------------------
@@ -155,29 +171,29 @@ int LedController::ProcessCommand(String command)
 //  ----------------------------------------------------------------------------
 int LedController::On()
 {  
-    this->ir_controller->Send(IR_LDS_ON);
+    this->SendIRCommand(IR_LDS_ON);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Off()
 {
-    this->ir_controller->Send(IR_LDS_OFF);
+    this->SendIRCommand(IR_LDS_OFF);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::OnOff()
 {
-    if (this->onOffState)
+    if (this->on_off_state)
     {
         this->Off();
-        this->onOffState = false;
+        this->on_off_state = false;
     }
     else
     {
         this->On();
-        this->onOffState = true;
+        this->on_off_state = true;
     }
     return LED_COMMAND_OK;
 }
@@ -185,7 +201,8 @@ int LedController::OnOff()
 //  ----------------------------------------------------------------------------
 int LedController::White()
 {
-    this->ir_controller->Send(IR_LDS_WHITE);
+    this->SendIRCommand(IR_LDS_WHITE);
+    this->SetName("White");
     return LED_COMMAND_OK;
 }
 
@@ -195,23 +212,28 @@ int LedController::Red(int hue)
     switch(hue)
     {
         case 0:
-            this->ir_controller->Send(IR_LDS_RED_0);
+            this->SendIRCommand(IR_LDS_RED_0);
+            this->SetName("Red");
             break;
 
         case 1:
-            this->ir_controller->Send(IR_LDS_RED_1);
+            this->SendIRCommand(IR_LDS_RED_1);
+            this->SetName("Tomato");
             break;
 
         case 2:
-            this->ir_controller->Send(IR_LDS_RED_2);
+            this->SendIRCommand(IR_LDS_RED_2);
+            this->SetName("Orange");
             break;
 
         case 3:
-            this->ir_controller->Send(IR_LDS_RED_3);
+            this->SendIRCommand(IR_LDS_RED_3);
+            this->SetName("Gold");
             break;
 
         case 4:
-            this->ir_controller->Send(IR_LDS_RED_4);
+            this->SendIRCommand(IR_LDS_RED_4);
+            this->SetName("Yellow");
             break;
         
         default:
@@ -227,23 +249,28 @@ int LedController::Green(int hue)
     switch(hue)
     {
         case 0:
-            this->ir_controller->Send(IR_LDS_GREEN_0);
+            this->SendIRCommand(IR_LDS_GREEN_0);
+            this->SetName("Green");
             break;
 
         case 1:
-            this->ir_controller->Send(IR_LDS_GREEN_1);
+            this->SendIRCommand(IR_LDS_GREEN_1);
+            this->SetName("Mint");
             break;
 
         case 2:
-            this->ir_controller->Send(IR_LDS_GREEN_2);
+            this->SendIRCommand(IR_LDS_GREEN_2);
+            this->SetName("Sea");
             break;
 
         case 3:
-            this->ir_controller->Send(IR_LDS_GREEN_3);
+            this->SendIRCommand(IR_LDS_GREEN_3);
+            this->SetName("Teal");
             break;
 
         case 4:
-            this->ir_controller->Send(IR_LDS_GREEN_4);
+            this->SendIRCommand(IR_LDS_GREEN_4);
+            this->SetName("Aqua");
             break;
         
         default:
@@ -259,23 +286,28 @@ int LedController::Blue(int hue)
     switch(hue)
     {
         case 0:
-            this->ir_controller->Send(IR_LDS_BLUE_0);
+            this->SendIRCommand(IR_LDS_BLUE_0);
+            this->SetName("Blue");
             break;
 
         case 1:
-            this->ir_controller->Send(IR_LDS_BLUE_1);
+            this->SendIRCommand(IR_LDS_BLUE_1);
+            this->SetName("Purple");
             break;
 
         case 2:
-            this->ir_controller->Send(IR_LDS_BLUE_2);
+            this->SendIRCommand(IR_LDS_BLUE_2);
+            this->SetName("Violet");
             break;
 
         case 3:
-            this->ir_controller->Send(IR_LDS_BLUE_3);
+            this->SendIRCommand(IR_LDS_BLUE_3);
+            this->SetName("Fuchsia");
             break;
 
         case 4:
-            this->ir_controller->Send(IR_LDS_BLUE_4);
+            this->SendIRCommand(IR_LDS_BLUE_4);
+            this->SetName("Pink");
             break;
         
         default:
@@ -288,43 +320,66 @@ int LedController::Blue(int hue)
 //  ----------------------------------------------------------------------------
 int LedController::Brighter()
 {
-    this->ir_controller->Send(IR_LDS_UP);
+    this->SendIRCommand(IR_LDS_UP);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Darker()
 {
-    this->ir_controller->Send(IR_LDS_DOWN);
+    this->SendIRCommand(IR_LDS_DOWN);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Flash()
 {
-    this->ir_controller->Send(IR_LDS_FLASH);
+    this->SendIRCommand(IR_LDS_FLASH);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Strobe()
 {
-    this->ir_controller->Send(IR_LDS_STROBE);
+    this->SendIRCommand(IR_LDS_STROBE);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Fade()
 {
-    this->ir_controller->Send(IR_LDS_FADE);
+    this->SendIRCommand(IR_LDS_FADE);
     return LED_COMMAND_OK;
 }
 
 //  ----------------------------------------------------------------------------
 int LedController::Smooth()
 {
-    this->ir_controller->Send(IR_LDS_SMOOTH);
+    this->SendIRCommand(IR_LDS_SMOOTH);
     return LED_COMMAND_OK;
+}
+
+//  ----------------------------------------------------------------------------
+String LedController::GetName()
+{
+    if (!this->on_off_state)
+        return "Off";
+    return this->color_name;
+}
+
+//  ----------------------------------------------------------------------------
+void LedController::SetName(String color_name)
+{
+    this->color_name = color_name == "Off" ? "White" : color_name;
+    this->has_changed = true;
+}
+
+//  ----------------------------------------------------------------------------
+bool LedController::HasChanged()
+{
+    bool current_state = this->has_changed;
+    this->has_changed = false;
+    return current_state;
 }
 
 #endif

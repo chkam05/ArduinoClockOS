@@ -84,6 +84,89 @@ void ProcessInput()
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+//  *** PROCESS DISPLAY WORK METHODS ***
+////////////////////////////////////////////////////////////////////////////////
+
+void ProcessAlarmDisplay()
+{
+    bool blink = controller->clock_ctrl->GetBlink();
+    DisplayString * dsp_str_l = controller->GetDisplayString(TEXT_ALIGN_LEFT);
+    DisplayString * dsp_str_r = controller->GetDisplayString(TEXT_ALIGN_RIGHT);
+
+    if (blink)
+    {
+        dsp_str_l->text = "ALARM";
+        dsp_str_l->offset =   10;
+        dsp_str_l->_xpos  =   8;
+        dsp_str_l->_width +=  2;
+            
+        dsp_str_r->text = controller->clock_ctrl->GetTime("HM", ':', false);
+        dsp_str_r->offset = 1;
+
+        controller->display_ctrl->DrawSprite(SPRITE_CLOCK, 0, 0);
+        controller->display_ctrl->PrintDS(dsp_str_l, true);
+        controller->display_ctrl->PrintDS(dsp_str_r, true);
+
+        if (!controller->buzzer_ctrl->UpdateToneAsync())
+            controller->buzzer_ctrl->PlayToneAsync(NOTE_C8, 2);
+        
+        if (controller->alarm->IsLed())
+            controller->led_controller->On();
+    }
+    else
+    {
+        controller->display_ctrl->Clear();
+
+        if (controller->alarm->IsLed())
+            controller->led_controller->Off();
+    }
+}
+
+//  ----------------------------------------------------------------------------
+void ProcessLedsDisplay(bool ignore_change = false)
+{
+    if (ignore_change || controller->led_controller->HasChanged())
+    {
+        String color_name = controller->led_controller->GetName();
+        int text_length = controller->display_ctrl->GetTextWidth(0, color_name) + 2;
+        int text_xpos = controller->display_ctrl->GetWidth();
+        
+        controller->display_ctrl->Clear();
+        controller->display_ctrl->DrawSprite(SPRITE_LEDS, 0, 0);
+        controller->display_ctrl->PrintText(0, 9, "Leds");
+        controller->display_ctrl->PrintText(0, text_xpos - text_length, color_name);
+    }
+}
+
+//  ----------------------------------------------------------------------------
+void ProcessDisplay()
+{
+    //  Przerwanie z powodu blokady serwisowej.
+    if (controller->IsServiceLocked())
+        return;
+    
+    int machine_state = controller->GetMachineState();
+
+    if (machine_state == GLOBAL_STATE_NORMAL)
+        controller->ProcessDisplay();
+
+    else if (machine_state == GLOBAL_STATE_SETTER)
+        data_setter->UpdateDisplay();
+    
+    else if (machine_state == GLOBAL_STATE_ALARM)
+        ProcessAlarmDisplay();
+    
+    else if (machine_state == GLOBAL_STATE_MESSAGE)
+        controller->msg_ctrl->UpdateDisplay();
+    
+    else if (machine_state == GLOBAL_STATE_SONG_PLAY)
+        controller->song_controller->ProcessPlaying();
+    
+    else if (machine_state == GLOBAL_STATE_LEDS)
+        ProcessLedsDisplay();
+}
+
+////////////////////////////////////////////////////////////////////////////////
 //  *** PROCESS DATA WORK METHODS ***
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -155,6 +238,11 @@ void ProcessMenuState(int input)
         case MENU_EXIT:
             controller->SetMachineState(GLOBAL_STATE_NORMAL);
             controller->SetDisplayingState(DISPLAY_DATETIME_STATE);                    
+            break;
+        
+        case MENU_ITEM_LEDS:
+            controller->SetMachineState(GLOBAL_STATE_LEDS);
+            ProcessLedsDisplay(true);
             break;
 
         case SETTINGS_ITEM_TIME:
@@ -267,6 +355,83 @@ void ProcessSongPlayState(int input)
 }
 
 //  ----------------------------------------------------------------------------
+void ProcessLedsState(int input)
+{
+    switch (input)
+    {
+        case KEYPAD_0_KEY:
+            controller->led_controller->OnOff();
+            return;
+          
+        case KEYPAD_1_KEY:
+            controller->led_controller->Red(0);
+            return;
+        
+        case KEYPAD_2_KEY:
+            controller->led_controller->Green(0);
+            return;
+        
+        case KEYPAD_3_KEY:
+            controller->led_controller->Blue(0);
+            return;
+        
+        case KEYPAD_4_KEY:
+            controller->led_controller->Red(2);
+            return;
+        
+        case KEYPAD_5_KEY:
+            controller->led_controller->Green(2);
+            return;
+        
+        case KEYPAD_6_KEY:
+            controller->led_controller->Blue(2);
+            return;
+        
+        case KEYPAD_7_KEY:
+            controller->led_controller->Red(4);
+            return;
+
+        case KEYPAD_8_KEY:
+            controller->led_controller->Green(4);
+            return;
+        
+        case KEYPAD_9_KEY:
+            controller->led_controller->Blue(4);
+            return;
+        
+        case KEYPAD_PREV_KEY:
+            controller->led_controller->Darker();
+            return;
+        
+        case KEYPAD_NEXT_KEY:
+            controller->led_controller->Brighter();
+            return;
+        
+        case KEYPAD_SELECT_KEY:
+            controller->led_controller->White();
+            return;
+        
+        case KEYPAD_BACK_KEY:
+            controller->led_controller->Strobe();
+            return;
+        
+        case KEYPAD_OPTION_KEY:
+            controller->led_controller->Smooth();
+            return;
+        
+        case KEYPAD_MENU_KEY:
+            controller->display_ctrl->Clear();
+            controller->SetMachineState(GLOBAL_STATE_NORMAL);
+            controller->SetDisplayingState(DISPLAY_DATETIME_STATE);
+            return;
+        
+        case KEYPAD_NO_KEY:
+        default:
+            return;
+    }
+}
+
+//  ----------------------------------------------------------------------------
 void ProcessFunctionalities()
 {
     //  Przerwanie z powodu blokady serwisowej.
@@ -304,6 +469,10 @@ void ProcessFunctionalities()
             int alarm_output = controller->alarm->ProcessInput(input_key);
             ProcessAlarmState(alarm_output);
         }
+        else if (machine_state == GLOBAL_STATE_LEDS)
+        {          
+            ProcessLedsState(input_key);
+        }
     }
 
     //  Tryby pozwalajace na 0 input.
@@ -321,70 +490,6 @@ void ProcessFunctionalities()
     {
         //
     }
-}
-
-////////////////////////////////////////////////////////////////////////////////
-//  *** PROCESS DISPLAY WORK METHODS ***
-////////////////////////////////////////////////////////////////////////////////
-
-void ProcessAlarmDisplay()
-{
-    bool blink = controller->clock_ctrl->GetBlink();
-    DisplayString * dsp_str_l = controller->GetDisplayString(TEXT_ALIGN_LEFT);
-    DisplayString * dsp_str_r = controller->GetDisplayString(TEXT_ALIGN_RIGHT);
-
-    if (blink)
-    {
-        dsp_str_l->text = "ALARM";
-        dsp_str_l->offset =   10;
-        dsp_str_l->_xpos  =   8;
-        dsp_str_l->_width +=  2;
-            
-        dsp_str_r->text = controller->clock_ctrl->GetTime("HM", ':', false);
-        dsp_str_r->offset = 1;
-
-        controller->display_ctrl->DrawSprite(SPRITE_CLOCK, 0, 0);
-        controller->display_ctrl->PrintDS(dsp_str_l, true);
-        controller->display_ctrl->PrintDS(dsp_str_r, true);
-
-        if (!controller->buzzer_ctrl->UpdateToneAsync())
-            controller->buzzer_ctrl->PlayToneAsync(NOTE_C8, 2);
-        
-        if (controller->alarm->IsLed())
-            controller->led_controller->On();
-    }
-    else
-    {
-        controller->display_ctrl->Clear();
-
-        if (controller->alarm->IsLed())
-            controller->led_controller->Off();
-    }
-}
-
-//  ----------------------------------------------------------------------------
-void ProcessDisplay()
-{
-    //  Przerwanie z powodu blokady serwisowej.
-    if (controller->IsServiceLocked())
-        return;
-    
-    int machine_state = controller->GetMachineState();
-
-    if (machine_state == GLOBAL_STATE_NORMAL)
-        controller->ProcessDisplay();
-
-    else if (machine_state == GLOBAL_STATE_SETTER)
-        data_setter->UpdateDisplay();
-    
-    else if (machine_state == GLOBAL_STATE_ALARM)
-        ProcessAlarmDisplay();
-    
-    else if (machine_state == GLOBAL_STATE_MESSAGE)
-        controller->msg_ctrl->UpdateDisplay();
-    
-    else if (machine_state == GLOBAL_STATE_SONG_PLAY)
-        controller->song_controller->ProcessPlaying();
 }
 
 ////////////////////////////////////////////////////////////////////////////////
