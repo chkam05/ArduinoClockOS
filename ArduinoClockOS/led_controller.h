@@ -55,6 +55,7 @@ class LedController
 {
     private:
         IRController  * ir_controller;
+        bool onOffState = false;
 
         bool ParseColorHue(String command, int &value);
 
@@ -64,6 +65,7 @@ class LedController
         int   ProcessCommand(String command);
         int   On();
         int   Off();
+        int   OnOff();
         int   White();
         int   Red(int hue);
         int   Green(int hue);
@@ -152,7 +154,7 @@ int LedController::ProcessCommand(String command)
 
 //  ----------------------------------------------------------------------------
 int LedController::On()
-{
+{  
     this->ir_controller->Send(IR_LDS_ON);
     return LED_COMMAND_OK;
 }
@@ -161,6 +163,22 @@ int LedController::On()
 int LedController::Off()
 {
     this->ir_controller->Send(IR_LDS_OFF);
+    return LED_COMMAND_OK;
+}
+
+//  ----------------------------------------------------------------------------
+int LedController::OnOff()
+{
+    if (this->onOffState)
+    {
+        this->Off();
+        this->onOffState = false;
+    }
+    else
+    {
+        this->On();
+        this->onOffState = true;
+    }
     return LED_COMMAND_OK;
 }
 

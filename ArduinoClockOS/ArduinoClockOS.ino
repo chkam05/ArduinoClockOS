@@ -103,6 +103,39 @@ void ProcessNormalState(int input)
             controller->SetDisplayingState(DISPLAY_TEMPERATURE_OUT_STATE);
             return;
         
+        case KEYPAD_0_KEY:
+            controller->led_controller->OnOff();            
+            break;
+        
+        case KEYPAD_NEXT_KEY:
+            controller->led_controller->Brighter();
+            break;
+            
+        case KEYPAD_PREV_KEY:
+            controller->led_controller->Darker();
+            break;
+        
+        case KEYPAD_SELECT_KEY:
+            //  Open Alarm:
+            controller->display_ctrl->Clear();
+            controller->SetMachineState(GLOBAL_STATE_SETTER);
+            data_setter->OpenSetter(ALARM_SETTER);
+            return;
+        
+        case KEYPAD_BACK_KEY:
+            //  Open Brightness:
+            controller->display_ctrl->Clear();
+            controller->SetMachineState(GLOBAL_STATE_SETTER);
+            data_setter->OpenSetter(BRIGHTNESS_SETTER);
+            return;
+        
+        case KEYPAD_OPTION_KEY:
+            //  Open Clock:
+            controller->display_ctrl->Clear();
+            controller->SetMachineState(GLOBAL_STATE_SETTER);
+            data_setter->OpenSetter(TIME_SETTER);
+            return;
+        
         case KEYPAD_MENU_KEY:
             controller->SetMachineState(GLOBAL_STATE_MENU);
             menu_controller->OpenMenu();
