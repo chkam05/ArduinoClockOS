@@ -25,6 +25,7 @@
 
 #define SETTER_NOTHING    -1
 #define SETTER_SAVE       -2
+#define SETTER_ALARM_SET_LED        -21
 #define SETTER_EXIT       -3
 #define SETTER_FULL_EXIT  -4
 #define SETTER_OFF        -5
@@ -34,12 +35,13 @@
 #define SETTER_BRIGHNESS_POSITIONS  11
 #define SETTER_BRIGHNESS_AUTO       10
 #define SETTER_BEEP_POSITIONS       7
-#define SETTER_ALARM_POSITIONS      5
+#define SETTER_ALARM_POSITIONS      6
 
 #define SETTER_INPUT_MAX            2
 
 const String SETTER_AUTO_STR = "<AUTO>";
 const String SETTER_SAVE_STR = "<SAVE>";
+const String SETTER_ALARM_SET_LED_STR = "<LED>";
 const String SETTER_EXIT_STR = "<EXIT>";
 const String SETTER_SET_STR = "<SET>";
 const String SETTER_OFF_STR = "<OFF>";
@@ -208,6 +210,13 @@ int DataSetter::NavigateForward()
                 int hour_alarm = this->data[1];
                 int mins_alarm = this->data[2];
                 this->controller->SetAlarm(hour_alarm, mins_alarm);
+                return SETTER_EXIT;
+            }
+            if (value == SETTER_ALARM_SET_LED)
+            {
+                int hour_alarm = this->data[1];
+                int mins_alarm = this->data[2];
+                this->controller->SetAlarm(hour_alarm, mins_alarm, true, true);
                 return SETTER_EXIT;
             }
             else if (value == SETTER_EXIT)
@@ -496,6 +505,9 @@ void DataSetter::DisplayData(DisplayController * dsp_ctrl)
                 display_string = SETTER_SET_STR;
             
             else if (pos == 5)
+                display_string = SETTER_ALARM_SET_LED_STR;
+            
+            else if (pos == 6)
                 display_string = SETTER_EXIT_STR;
 
             break;
@@ -655,7 +667,8 @@ void DataSetter::OpenSetter(int mode)
             this->data[2] = this->controller->alarm->minute;
             this->data[3] = SETTER_OFF;
             this->data[4] = SETTER_SAVE;
-            this->data[5] = SETTER_EXIT;            
+            this->data[5] = SETTER_ALARM_SET_LED;
+            this->data[6] = SETTER_EXIT;            
             this->allow_keyboard_input = true;
             break;
     }

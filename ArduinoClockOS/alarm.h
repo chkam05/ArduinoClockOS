@@ -31,6 +31,7 @@ class Alarm
     private:
         int   alarm_state       =   ALARM_DISARMED;
         bool  enabled           =   false;
+        bool  is_led            =   false;
         bool  has_been_raised   =   false;
 
         bool  CheckBaseTrigger(Time now_time);
@@ -40,7 +41,7 @@ class Alarm
     public:
         int   hour    =   6;
         int   minute  =   30;
-
+        
         int   sleep_raise   =   0;
         int   sleep_day     =   0;
 
@@ -49,9 +50,10 @@ class Alarm
         bool  CheckTrigger(Time now_time);
         int   GetState();
         bool  IsEnabled();
+        bool  IsLed();
 
         void  DisableAlarm();
-        void  SetAlarm(int hour, int minute, bool enabled = true);
+        void  SetAlarm(int hour, int minute, bool enabled = true, bool is_led = false);
         int   ProcessInput(char key);
 };
 
@@ -175,6 +177,12 @@ bool Alarm::IsEnabled()
 }
 
 //  ----------------------------------------------------------------------------
+bool Alarm::IsLed()
+{
+    return this->is_led;
+}
+
+//  ----------------------------------------------------------------------------
 //  Rozbrojenie alarmu.
 void Alarm::DisableAlarm()
 {
@@ -187,12 +195,13 @@ void Alarm::DisableAlarm()
  *  @param hour: Godzina uruchomienia alarmu.
  *  @param minute: Minuta uruchomienia alarmu.
  */
-void Alarm::SetAlarm(int hour, int minute, bool enabled = true)
+void Alarm::SetAlarm(int hour, int minute, bool enabled = true, bool is_led = false)
 {
     this->alarm_state = ALARM_DISARMED;
     this->hour = hour;
     this->minute = minute;
     this->enabled = enabled;
+    this->is_led = is_led;
 }
 
 //  ----------------------------------------------------------------------------

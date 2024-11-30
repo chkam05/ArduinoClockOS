@@ -236,6 +236,9 @@ void ProcessAlarmState(int input)
 {
     if (input == ALARM_DISARMED || input == ALARM_SUSPENDED)
     {
+        if (controller->buzzer_ctrl->UpdateToneAsync())
+            controller->buzzer_ctrl->StopToneAsync();
+
         controller->SetMachineState(GLOBAL_STATE_NORMAL);
         controller->SetDisplayingState(DISPLAY_DATETIME_STATE);
     }
@@ -344,11 +347,18 @@ void ProcessAlarmDisplay()
         controller->display_ctrl->PrintDS(dsp_str_l, true);
         controller->display_ctrl->PrintDS(dsp_str_r, true);
 
-        controller->buzzer_ctrl->PlayTone(NOTE_C8, 1);
+        if (!controller->buzzer_ctrl->UpdateToneAsync())
+            controller->buzzer_ctrl->PlayToneAsync(NOTE_C8, 2);
+        
+        if (controller->alarm->IsLed())
+            controller->led_controller->On();
     }
     else
     {
         controller->display_ctrl->Clear();
+
+        if (controller->alarm->IsLed())
+            controller->led_controller->Off();
     }
 }
 

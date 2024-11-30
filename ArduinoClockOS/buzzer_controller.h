@@ -45,13 +45,19 @@ struct BuzzerNote
 class BuzzerController
 {
     private:
-        int pin_output  = BUZZER_PIN_OUT;
+        unsigned long start_time;
+        int   current_note_duration;
+
+        int   pin_output  = BUZZER_PIN_OUT;
+        bool  is_playing  = false;
         
     public:
         BuzzerController(int pin_out);
 
         void PlayTone(int note, int duration);
-        void PlayTone(BuzzerNote *note);
+        void PlayToneAsync(int note, int duration);
+        void StopToneAsync();
+        bool UpdateToneAsync();
 };
 
 
@@ -75,29 +81,61 @@ BuzzerController::BuzzerController(int pin_out = BUZZER_PIN_OUT)
  */ 
 void BuzzerController::PlayTone(int note, int duration)
 {
+    if (this->is_playing)
+        this->StopToneAsync();
+    
     //  Zapobiegniecie odtworzenie nuty 0 i podzielenia sekundy przez zero.
     if (duration <= 0 || duration <= 0)
         return;
     
-    //  Obliczenie czasu odtwarzania tonu i pauzy.
-    int note_duration = 1000 / duration;
-    int note_pause = note_duration * 1.30;
+    //  Obliczenie pauzy.
+    int note_pause = (1000 / duration) * 1.30;
 
     //  Odtworzenie okreslonego tonu przez okreslony czas.
-    tone(this->pin_output, note, note_duration);
+    this->PlayToneAsync(note, duration);
     delay(note_pause);
 
     //  Zakonczenie odtwarzania tonu.
-    noTone(this->pin_output);
+    this->StopToneAsync();
 }
 
 //  ----------------------------------------------------------------------------
-/*  Uruchomienie odtworzenia dzwieku
- *  @param note: Struktura zwierajaca nute i czas jej odtwarzania w ms.
- */
-void BuzzerController::PlayTone(BuzzerNote *note)
+void BuzzerController::PlayToneAsync(int note, int duration)
 {
-    this->PlayTone(note->note, note->duration);
+    //  Obliczenie czasu odtwarzania tonu.    
+    this->current_note_duration = 1000 / duration;
+
+    //  Odtworzenie okreslonego tonu przez okreslony czas.
+    this->is_playing = true;
+    this->start_time = millis();
+    tone(this->pin_output, note, this->current_note_duration);
+}
+
+//  ----------------------------------------------------------------------------
+void BuzzerController::StopToneAsync()
+{
+    if (this->is_playing)
+    {
+        this->is_playing = false;
+        noTone(this->pin_output);        
+    }
+}
+
+//  ----------------------------------------------------------------------------
+bool BuzzerController::UpdateToneAsync()
+{
+    if (this->is_playing)
+    {
+        if (millis() - this->start_time >= this->current_note_duration)
+        {
+            this->StopToneAsync();
+            return false;            
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 #endif

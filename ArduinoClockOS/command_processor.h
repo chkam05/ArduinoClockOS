@@ -54,6 +54,7 @@ class CommandProcessor
         int   ProcessPlayCommand();
         int   ProcessServiceLockCommand();
         int   ProcessServiceUnlockCommand();
+        int   ProcessTest();
         int   ProcessTimeSetCommand();
         int   ProcessVpStart();
         int   ProcessWeatherAddCommand();
@@ -215,6 +216,9 @@ int CommandProcessor::ProcessAlarmGetCommand()
 {
     String output = String(this->controller->alarm->hour) + ":" + String(this->controller->alarm->minute);
     output += this->controller->alarm->IsEnabled() ? " ON" : " OFF";
+    
+    if (controller->alarm->IsLed())
+        output += " LED";
 
     this->controller->serial_ctrl->WriteRawData(
         output,
@@ -302,6 +306,14 @@ int CommandProcessor::ProcessAlarmSetCommand()
         return COMMAND_DISPLAY_DATETIME;
     }
 
+    bool led = false;
+
+    if (this->params_data.substring(0, 3) == "led")
+    {
+        led = true;
+        this->params_data = this->params_data.substring(4);
+    }
+
     int *data_array = new int[2] {0, 0};
     int last_step = this->ParseMultiNumberData(data_array, 23);
 
@@ -310,7 +322,7 @@ int CommandProcessor::ProcessAlarmSetCommand()
         int hour = max(0, min(23, data_array[0]));
         int min = max(0, min(59, data_array[1]));
         
-        this->controller->SetAlarm(hour, min);
+        this->controller->SetAlarm(hour, min, true, led);
         this->NotifyConfigurationUpdated();
         return COMMAND_DISPLAY_DATETIME;
     }
@@ -528,6 +540,18 @@ int CommandProcessor::ProcessServiceUnlockCommand()
 }
 
 //  ----------------------------------------------------------------------------
+int CommandProcessor::ProcessTest()
+{
+    if (this->params_data == "alarm")
+    {
+        this->controller->display_ctrl->Clear();
+        this->controller->SetMachineState(GLOBAL_STATE_ALARM);
+    }
+
+    return COMMAND_NONE;
+}
+
+//  ----------------------------------------------------------------------------
 //  Przetworzenie polecenia ustawienia czasu.
 int CommandProcessor::ProcessTimeSetCommand()
 {
@@ -682,6 +706,9 @@ int CommandProcessor::ProcessCommand(String raw_data)
     
     else if (this->ValidateCommand("/unlock"))
         return this->ProcessServiceUnlockCommand();
+    
+    else if (this->ValidateCommand("/test"))
+        return this->ProcessTest();
     
     else if (this->ValidateCommand("/time get"))
         return this->ProcessTimeGetCommand();

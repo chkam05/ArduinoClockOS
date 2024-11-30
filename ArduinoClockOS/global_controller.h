@@ -120,7 +120,7 @@ class GlobalController
 
         //  Alarm Management.
         void  DisableAlarm(bool save_to_file = true);
-        void  SetAlarm(int hour, int minute, bool enabled = true, bool save_to_file = true);
+        void  SetAlarm(int hour, int minute, bool enabled = true, bool is_led = false, bool save_to_file = true);
 
         //  Brightness Management.
         bool  IsAutoBrightness();
@@ -473,9 +473,9 @@ void GlobalController::DisableAlarm(bool save_to_file = true)
  *  @param hour: Godzina uruchomienia alarmu.
  *  @param minute: Minuta uruchomienia alarmu.
  */
-void GlobalController::SetAlarm(int hour, int minute, bool enabled = true, bool save_to_file = true)
+void GlobalController::SetAlarm(int hour, int minute, bool enabled = true, bool is_led = false, bool save_to_file = true)
 {
-    this->alarm->SetAlarm(hour, minute, enabled);
+    this->alarm->SetAlarm(hour, minute, enabled, is_led);
 
     if (save_to_file)
         this->SaveData();
@@ -895,9 +895,12 @@ void GlobalController::LoadData()
 
                     int alarm_hour = line.substring(0, colon_index).toInt();
                     int alarm_min = line.substring(colon_index+1, space_index).toInt();
-                    bool alarm_is_enabled = (line.substring(space_index+1, space_index+3) == "on");
 
-                    this->SetAlarm(alarm_hour, alarm_min, alarm_is_enabled, false);
+                    line = line.substring(space_index+1);
+                    bool alarm_is_enabled = (line.substring(0, 2) == "on");
+                    bool alarm_is_led = line.length() > 3 ? ((alarm_is_enabled ? line.substring(3, 6) : line.substring(4, 7)) == "led") : false;
+
+                    this->SetAlarm(alarm_hour, alarm_min, alarm_is_enabled, alarm_is_led, false);
                 }
             }
 
@@ -942,7 +945,7 @@ void GlobalController::SaveData()
     {
         File file = this->sdcard_ctrl->OpenFileToWrite(CONFIG_FILE_NAME);
 
-        String alarm_data = String(this->alarm->hour) + ":" + String(this->alarm->minute) + " " + (this->alarm->IsEnabled() ? "on" : "off");
+        String alarm_data = String(this->alarm->hour) + ":" + String(this->alarm->minute) + " " + (this->alarm->IsEnabled() ? "on" : "off") + " " + (this->alarm->IsLed() ? "led" : "off");
         String beep_data = String(this->buzzer_hour_change_interval);
         String brightness_data = this->brightness_auto ? "auto" : String(this->display_ctrl->GetBrightness());
 
